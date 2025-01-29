@@ -4,14 +4,12 @@ services:
       context: .
       target: dev
       args:
-        GH_NPM_TOKEN: ${GH_NPM_TOKEN}
         DATABASE_URL: mongodb://root:prisma@mongodb:27017/sesami-app?authSource=admin&directConnection=true
     ports:
       - 3000:3000
       - 9229:9229
     environment:
       DATABASE_URL: mongodb://root:prisma@mongodb:27017/sesami-app?authSource=admin&directConnection=true
-      GH_NPM_TOKEN: ${GH_NPM_TOKEN}
       PORT: 3000
       DEPLOYMENT_ENV: stage
     depends_on:

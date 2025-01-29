@@ -6,7 +6,6 @@ WORKDIR /usr/src/app
 EXPOSE 80
 
 FROM base as dev
-ARG GH_NPM_TOKEN
 ARG DATABASE_URL
 ENV PRISMA_CLI_BINARY_TARGETS linux-musl-openssl-3.0.x
 RUN --mount=type=bind,source=package.json,target=package.json \
@@ -15,17 +14,15 @@ RUN --mount=type=bind,source=package.json,target=package.json \
     --mount=type=cache,target=/root/.npm \
     yarn install --frozen-lockfile
 USER node
-CMD yarn prisma:generate && yarn seed && yarn dev
+CMD yarn prisma:generate && yarn dev
 
 FROM base as build-deps
-ARG GH_NPM_TOKEN
 COPY --chown=node:node package.json ./package.json
 COPY --chown=node:node yarn.lock ./yarn.lock
 COPY --chown=node:node .npmrc ./.npmrc
 RUN yarn install --frozen-lockfile
 
 FROM base as prod-deps
-ARG GH_NPM_TOKEN
 COPY --chown=node:node package.json ./package.json
 COPY --chown=node:node yarn.lock ./yarn.lock
 COPY --chown=node:node .npmrc ./.npmrc
