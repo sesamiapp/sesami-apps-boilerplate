@@ -1308,10 +1308,10 @@
   resolved "https://registry.yarnpkg.com/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.21.2.tgz#e4291e3c1bc637083f87936c333cdbcad22af63b"
   integrity sha512-6UUxd0+SKomjdzuAcp+HAmxw1FlGBnl1v2yEPSabtx4lBfdXHDVsW7+lQkgz9cNFJGY3AWR7+V8P5BqkD9L9nA==
 
-"@sesamiapp/app-message@^1.0.85":
-  version "1.0.85"
-  resolved "https://npm.pkg.github.com/download/@sesamiapp/app-message/1.0.85/2ae6af1361c820ab2c428cecbc31bcb8f357d323#2ae6af1361c820ab2c428cecbc31bcb8f357d323"
-  integrity sha512-u2N5JfIeMnGyp0Bv18MFqHxSYAwxSzJqn1cLYPtZMA6voh/C+Rv0kfyP6TKP7jeXdKgNKwtHbjmHEfZxFRFx8w==
+"@sesamiapp/app-message@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@sesamiapp/app-message/-/app-message-0.1.0.tgz#f0e64fa53aaa28a2b6d61c502142e0203736d5e9"
+  integrity sha512-R1q3DL/THlKtb7cpWJcN/athUr2hLU+w75euYx+g/rLpp5Mb4JsrCvvZ8D/uVPcb+asIrE/wgY2e+XbMehDW+g==
 
 "@sideway/address@^4.1.5":
   version "4.1.5"

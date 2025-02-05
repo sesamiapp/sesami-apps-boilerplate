@@ -10,7 +10,6 @@ ARG DATABASE_URL
 ENV PRISMA_CLI_BINARY_TARGETS linux-musl-openssl-3.0.x
 RUN --mount=type=bind,source=package.json,target=package.json \
     --mount=type=bind,source=yarn.lock,target=yarn.lock \
-    --mount=type=bind,source=.npmrc,target=.npmrc \
     --mount=type=cache,target=/root/.npm \
     yarn install --frozen-lockfile
 USER node
@@ -19,13 +18,11 @@ CMD yarn prisma:generate && yarn dev
 FROM base as build-deps
 COPY --chown=node:node package.json ./package.json
 COPY --chown=node:node yarn.lock ./yarn.lock
-COPY --chown=node:node .npmrc ./.npmrc
 RUN yarn install --frozen-lockfile
 
 FROM base as prod-deps
 COPY --chown=node:node package.json ./package.json
 COPY --chown=node:node yarn.lock ./yarn.lock
-COPY --chown=node:node .npmrc ./.npmrc
 RUN yarn install --frozen-lockfile  --production
 
 FROM build-deps as build

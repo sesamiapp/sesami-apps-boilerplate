@@ -21,7 +21,7 @@
   "dependencies": {
     "@codegenie/serverless-express": "^4.14.1",
     "@prisma/client": "5.19.1",
-    "@sesamiapp/app-message": "^1.0.85",
+    "@sesamiapp/app-message": "^0.1.0",
     "@tanstack/react-query": "^5.55.0",
     "@types/prettier": "^3.0.0",
     "antd": "^5.21.0",
