@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "NODE_ENV=development nodemon -w server/src -x tsx server/src/index.ts",
-    "start": "NODE_ENV=production node dist/server/src/index.js",
+    "start": "NODE_ENV=production node dist/index.js",
     "start:dev": "NODE_ENV=development node dist/index.js",
     "test:unit": "jest --testPathPattern=server/tests/unit-tests --config=./jest.config.js",
     "prisma:generate": "npx prisma generate",

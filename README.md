@@ -15,7 +15,7 @@ This route requires authentication. You can enable or disable authentication by 
 Ensure that the `isOAuthEnable` property is set to `true` before deploying your app to the production environment.
 
 #### Production build
-DOCKER_BUILDKIT=1  docker build . --target prod -t sesami-app --build-arg GH_NPM_TOKEN=$GH_NPM_TOKEN  
+DOCKER_BUILDKIT=1  docker build . --target prod -t sesami-app  
 
 #### Production run command
-docker run -e DATABASE_URL="<DATABASE_URL>" -p 3000:3000 sesami-app
+docker run -e DATABASE_URL="<DATABASE_URL>" -p 3000:80 sesami-app
