@@ -23,13 +23,13 @@ export const apiRequest = (getToken?: () => Promise<string | null>) => async (
         throw new Error(`Error ${response.status}: ${response.statusText}`)
     }
 
-    //parse:
-    let text
-    try{ text = await response.text() }catch(err){
-        throw new Error('Could not parse response', err as ErrorOptions) //tmp
-    }
-    try{ return JSON.parse(text) }catch(err){
-        throw new Error(`Could not parse response to JSON. ${text}`, err as ErrorOptions) //tmp
+    const contentType = response.headers.get('Content-Type') || '';
+
+    if (contentType.includes('application/json')) {
+        return response.json().catch((err) => {
+            throw new Error(`Failed to parse JSON: ${err.message}`);
+        });
     }
 
+    return response.text();
 }
