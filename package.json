@@ -7,19 +7,16 @@
     "start": "NODE_ENV=production node dist/index.js",
     "start:dev": "NODE_ENV=development node dist/index.js",
     "test:unit": "jest --testPathPattern=server/tests/unit-tests --config=./jest.config.js",
-    "prisma:generate": "npx prisma generate",
-    "prisma:push": "npx prisma db push",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
     "build": "NODE_ENV=production vite build && NODE_ENV=production tsc -p tsconfig.build.json",
     "typecheck": "tsc",
     "lint": "eslint ./client",
-    "seed": "npx prisma db seed"
-  },
-  "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@codegenie/serverless-express": "^4.14.1",
-    "@prisma/client": "5.19.1",
+    "@prisma/client": "6.19.2",
     "@sesamiapp/app-message": "^0.1.0",
     "@tanstack/react-query": "^5.55.0",
     "@types/prettier": "^3.0.0",
@@ -32,7 +29,7 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "prettier": "^3.5.0",
-    "prisma": "5.19.1",
+    "prisma": "6.19.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.1",

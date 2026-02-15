@@ -18,6 +18,7 @@ services:
         condition: service_healthy
     volumes:
       - ./:/usr/src/app
+      - /usr/src/app/node_modules
 
   mongodb:
     image: prismagraphql/mongo-single-replica:4.4.3-bionic
