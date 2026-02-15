@@ -63,14 +63,13 @@ const HostExperienceIBFormContent = () => {
             gap: 20
         }}>
 
-            <div style={{ width: '100%', maxWidth: 800 }}>
+            <div style={{ width: '100%' }}>
 
                 <h2>Experience(wrapper)</h2>
             
                 <div
                     style={{
                         width: '100%',
-                        maxWidth: 800,
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',

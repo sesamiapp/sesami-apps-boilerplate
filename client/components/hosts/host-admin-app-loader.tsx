@@ -50,36 +50,25 @@ const HostAdminAppLoaderContent = () => {
     return (
         <div style={{
             height: '100vh',
+            width:'100wh',
             display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            alignItems: 'center',
             padding: 16,
             gap: 20
         }}>
 
-            <div style={{ width: '100%', maxWidth: 800 }}>
-
-                <h2>Admin Portal(wrapper)</h2>
-
-                {/* load the app inside an iframe */}
+            <div style={{ flex:1 }}>
                 <iframe
                     ref={iframe}
                     src={(client && url) ? url : undefined}
                     style={{
                         width: '100%',
-                        height,
+                        height:'100%',
                         border: 'solid 1px #aaa',
                         borderRadius: 10
                     }}
                 />
 
             </div>
-
-            <a href="/experience/instantBooking" style={{ color: '#333' }}>
-                Go to Experience instant booking target
-            </a>
-
         </div>
     )
 }
