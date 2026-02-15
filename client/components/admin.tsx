@@ -175,6 +175,9 @@ const AdminContent = () => {
 
                     <div style={styles.buttonRow}>
                         <Button onClick={openGuide}>Guide</Button>
+                        <Button onClick={() => dispatch({ type: 'SET_STEP', step: 'home' })}>
+                            Cancel
+                        </Button>
                         <Button
                             type="primary"
                             onClick={() =>
