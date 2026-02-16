@@ -1,4 +1,5 @@
 import { Typography } from 'antd';
+import { type CSSProperties } from 'react';
 import { MonthGrid } from '../../month-grid';
 
 const { Text } = Typography;
@@ -9,8 +10,8 @@ interface AddHolidayPanelProps {
 
 export const AddHolidayPanel = ({ selectedYear }: AddHolidayPanelProps) => {
     return (
-        <div>
-            <Text strong style={{ display: 'block', marginBottom: 16 }}>
+        <div style={localStyles.root}>
+            <Text strong style={localStyles.yearLabel}>
                 Year: {selectedYear}
             </Text>
             <MonthGrid columns={4} year={selectedYear} />
@@ -18,3 +19,12 @@ export const AddHolidayPanel = ({ selectedYear }: AddHolidayPanelProps) => {
     );
 };
 
+const localStyles: Record<string, CSSProperties> = {
+    root: {
+        flex: 1,
+    },
+    yearLabel: {
+        display: 'block',
+        marginBottom: 16,
+    },
+};

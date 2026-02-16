@@ -1,4 +1,5 @@
 import { Button, Select, Typography } from 'antd';
+import { type CSSProperties } from 'react';
 import { styles } from '../../styles';
 
 const { Title, Text } = Typography;
@@ -22,7 +23,7 @@ export const AddHolidayHeader = ({
 }: AddHolidayHeaderProps) => {
     return (
         <div style={styles.headerContent}>
-            <div style={styles.leftHeaderWithControl}>
+            <div style={localStyles.leftHeaderWithControl}>
                 <div>
                     <Title level={4} style={{ margin: 0 }}>
                         Add Holiday
@@ -30,7 +31,7 @@ export const AddHolidayHeader = ({
                     <Text type="secondary">Visual yearly calendar</Text>
                 </div>
                 <Select
-                    style={{ minWidth: 180 }}
+                    style={localStyles.templateSelect}
                     value={selectedTemplate}
                     options={templateOptions}
                     onChange={onTemplateChange}
@@ -48,3 +49,14 @@ export const AddHolidayHeader = ({
     );
 };
 
+const localStyles: Record<string, CSSProperties> = {
+    leftHeaderWithControl: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        flexWrap: 'wrap',
+    },
+    templateSelect: {
+        minWidth: 180,
+    },
+};

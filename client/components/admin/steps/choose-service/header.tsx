@@ -17,7 +17,7 @@ export const ChooseServiceHeader = ({
     onConnect,
 }: ChooseServiceHeaderProps) => {
     return (
-        <div style={styles.headerContent}>
+        <div style={{ ...styles.headerContent, ...localStyles.root }}>
             <div>
                 <Title level={4} style={{ margin: 0 }}>
                     Choose Service
@@ -36,3 +36,6 @@ export const ChooseServiceHeader = ({
     );
 };
 
+const localStyles = {
+    root: {},
+};

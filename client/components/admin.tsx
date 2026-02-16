@@ -145,7 +145,7 @@ const AdminContent = () => {
     };
 
     return (
-        <div style={styles.page}>
+        <div style={{ ...styles.page, ...localStyles.page }}>
             <div style={styles.headerSection}>{renderHeader()}</div>
             <div style={styles.panelSection}>{renderPanel()}</div>
 
@@ -159,6 +159,10 @@ const AdminContent = () => {
             </Modal>
         </div>
     );
+};
+
+const localStyles = {
+    page: {},
 };
 
 export default Admin;

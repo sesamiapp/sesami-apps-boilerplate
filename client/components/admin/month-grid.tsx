@@ -1,6 +1,6 @@
 import { Calendar, Typography } from 'antd';
 import dayjs from 'dayjs';
-import { styles } from './styles';
+import { type CSSProperties } from 'react';
 
 const { Text } = Typography;
 
@@ -8,9 +8,8 @@ export const MonthGrid = ({ columns, year }: { columns: number; year: number }) 
     return (
         <div
             style={{
-                display: 'grid',
+                ...localStyles.grid,
                 gridTemplateColumns: `repeat(${columns}, minmax(260px, 1fr))`,
-                gap: 12,
             }}
         >
             {Array.from({ length: 12 }, (_, monthIndex) => (
@@ -35,11 +34,11 @@ const MonthCalendarCard = ({
     const monthEnd = monthStart.endOf('month');
 
     return (
-        <div style={styles.calendarCard}>
-            <Text strong style={{ marginBottom: 8 }}>
+        <div style={localStyles.calendarCard}>
+            <Text strong style={localStyles.monthLabel}>
                 {monthStart.format('MMM').toUpperCase()}
             </Text>
-            <div style={{ pointerEvents: 'none' }}>
+            <div style={localStyles.nonInteractiveCalendar}>
                 <Calendar
                     fullscreen={false}
                     value={monthStart}
@@ -51,3 +50,21 @@ const MonthCalendarCard = ({
     );
 };
 
+const localStyles: Record<string, CSSProperties> = {
+    grid: {
+        display: 'grid',
+        gap: 12,
+    },
+    calendarCard: {
+        border: '1px solid #f0f0f0',
+        borderRadius: 10,
+        padding: 10,
+        background: '#ffffff',
+    },
+    monthLabel: {
+        marginBottom: 8,
+    },
+    nonInteractiveCalendar: {
+        pointerEvents: 'none',
+    },
+};

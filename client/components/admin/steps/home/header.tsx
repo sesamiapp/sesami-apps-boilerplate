@@ -10,7 +10,7 @@ interface HomeHeaderProps {
 
 export const HomeHeader = ({ onGuide, onApplyHoliday }: HomeHeaderProps) => {
     return (
-        <div style={styles.headerContent}>
+        <div style={{ ...styles.headerContent, ...localStyles.root }}>
             <div>
                 <Title level={4} style={{ margin: 0 }}>
                     Holiday Dashboard
@@ -28,3 +28,6 @@ export const HomeHeader = ({ onGuide, onApplyHoliday }: HomeHeaderProps) => {
     );
 };
 
+const localStyles = {
+    root: {},
+};
