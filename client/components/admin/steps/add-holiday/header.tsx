@@ -28,7 +28,6 @@ export const AddHolidayHeader = ({
                     <Title level={4} style={{ margin: 0 }}>
                         Add Holiday
                     </Title>
-                    <Text type="secondary">Visual yearly calendar</Text>
                 </div>
                 <Select
                     style={localStyles.templateSelect}
