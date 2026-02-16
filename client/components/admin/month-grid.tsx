@@ -7,15 +7,18 @@ const { Text } = Typography;
 export const MonthGrid = ({
     columns,
     year,
+    useViewportHeight = true,
 }: {
     columns: number;
     year: number;
+    useViewportHeight?: boolean;
 }) => {
     const rows = Math.ceil(12 / columns);
     const gridSidePadding = 0;
     const cardSidePadding = '2vw';
     const viewportOffset = 'clamp(220px, 5vw, 420px)';
-    const cardHeight = `calc((100vh - ${viewportOffset} - ${rows - 1}px) / ${rows})`;
+    const calculatedCardHeight = `calc((100vh - ${viewportOffset} - ${rows - 1}px) / ${rows})`;
+    const cardHeight = useViewportHeight ? calculatedCardHeight : undefined;
 
     return (
         <>
@@ -25,7 +28,7 @@ export const MonthGrid = ({
                     ...localStyles.grid,
                     paddingInline: gridSidePadding,
                     gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                    height: '100%',
+                    height: useViewportHeight ? '100%' : '',
                 }}
             >
                 {Array.from({ length: 12 }, (_, monthIndex) => (
@@ -35,6 +38,7 @@ export const MonthGrid = ({
                         monthIndex={monthIndex}
                         cardHeight={cardHeight}
                         cardSidePadding={cardSidePadding}
+                        useViewportHeight={useViewportHeight}
                     />
                 ))}
             </div>
@@ -47,11 +51,13 @@ const MonthCalendarCard = ({
     monthIndex,
     cardHeight,
     cardSidePadding,
+    useViewportHeight,
 }: {
     year: number;
     monthIndex: number;
-    cardHeight: string;
+    cardHeight?: string;
     cardSidePadding: string;
+    useViewportHeight: boolean;
 }) => {
     const monthStart = dayjs().year(year).month(monthIndex).date(1);
 
@@ -61,6 +67,7 @@ const MonthCalendarCard = ({
                 ...localStyles.calendarCard,
                 height: cardHeight,
                 paddingInline: cardSidePadding,
+                aspectRatio: useViewportHeight ? '' : 1,
             }}
         >
             <Text strong style={localStyles.monthLabel}>

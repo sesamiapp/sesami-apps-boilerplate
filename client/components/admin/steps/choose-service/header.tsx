@@ -22,7 +22,6 @@ export const ChooseServiceHeader = ({
                 <Title level={4} style={{ margin: 0 }}>
                     Choose Service
                 </Title>
-                <Text type="secondary">Attach holiday setup to services</Text>
             </div>
 
             <div style={styles.buttonRow}>

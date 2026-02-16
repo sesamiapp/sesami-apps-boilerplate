@@ -20,10 +20,11 @@ export const ChooseServicePanel = ({
     return (
         <div style={localStyles.chooseServicePanel}>
             <div style={localStyles.chooseServiceLeft}>
-                <Text strong style={localStyles.calendarTitle}>
-                    Holiday Calendar ({selectedYear})
-                </Text>
-                <MonthGrid columns={2} year={selectedYear} />
+                <MonthGrid
+                    columns={2}
+                    year={selectedYear}
+                    useViewportHeight={false}
+                />
             </div>
 
             <div style={localStyles.chooseServiceRight}>
@@ -51,20 +52,21 @@ export const ChooseServicePanel = ({
 const localStyles: Record<string, CSSProperties> = {
     chooseServicePanel: {
         display: 'flex',
-        gap: 16,
-        alignItems: 'flex-start',
-        flexWrap: 'wrap',
+        height: '95%',
+        width: '100%',
     },
     chooseServiceLeft: {
-        flex: '1 1 680px',
+        width: '50%',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'auto',
     },
     chooseServiceRight: {
-        flex: '0 0 280px',
+        width: '50%',
+        height: '100%',
         border: '1px solid #f0f0f0',
         borderRadius: 10,
-        padding: 14,
         background: '#fafafa',
         display: 'flex',
         flexDirection: 'column',
