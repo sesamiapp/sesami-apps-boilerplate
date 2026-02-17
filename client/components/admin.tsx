@@ -58,6 +58,52 @@ const AdminContent = () => {
         [state.selectedCountryCode, state.selectedYear],
     );
 
+    useEffect(() => {
+        if (!Sesami || state.step !== 'chooseService') {
+            return;
+        }
+
+        let isActive = true;
+        const fetchServices = async () => {
+            setIsLoadingServices(true);
+            try {
+                const response = await retrieveServicesRequest(Sesami.getToken, {
+                    shop: Sesami.getShopId(),
+                    limit: 10,
+                    after: undefined,
+                    before: undefined,
+                    searchTerm: undefined,
+                    status: undefined,
+                });
+                if (!isActive) {
+                    return;
+                }
+
+                const fetchedServices = mapServicesResponse(response);
+                setServices(fetchedServices);
+            } catch (error) {
+                if (!isActive) {
+                    return;
+                }
+                const errorMessage =
+                    error instanceof Error
+                        ? error.message
+                        : 'Retrieve services request failed';
+                message.error(errorMessage);
+                setServices([]);
+            } finally {
+                if (isActive) {
+                    setIsLoadingServices(false);
+                }
+            }
+        };
+
+        void fetchServices();
+        return () => {
+            isActive = false;
+        };
+    }, [Sesami, state.step]);
+
     if (!Sesami) {
         return 'loading...';
     }
@@ -121,52 +167,6 @@ const AdminContent = () => {
             dispatch({ type: 'SET_STEP', step: 'chooseService' });
         }
     };
-
-    useEffect(() => {
-        if (state.step !== 'chooseService') {
-            return;
-        }
-
-        let isActive = true;
-        const fetchServices = async () => {
-            setIsLoadingServices(true);
-            try {
-                const response = await retrieveServicesRequest(Sesami.getToken, {
-                    shop: Sesami.getShopId(),
-                    limit: 10,
-                    after: undefined,
-                    before: undefined,
-                    searchTerm: undefined,
-                    status: undefined,
-                });
-                if (!isActive) {
-                    return;
-                }
-
-                const fetchedServices = mapServicesResponse(response);
-                setServices(fetchedServices);
-            } catch (error) {
-                if (!isActive) {
-                    return;
-                }
-                const errorMessage =
-                    error instanceof Error
-                        ? error.message
-                        : 'Retrieve services request failed';
-                message.error(errorMessage);
-                setServices([]);
-            } finally {
-                if (isActive) {
-                    setIsLoadingServices(false);
-                }
-            }
-        };
-
-        void fetchServices();
-        return () => {
-            isActive = false;
-        };
-    }, [Sesami, state.step]);
 
     const renderHeader = () => {
         if (state.step === 'home') {
