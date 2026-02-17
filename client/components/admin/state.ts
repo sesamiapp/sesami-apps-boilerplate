@@ -4,7 +4,7 @@ export interface AdminState {
     step: Step;
     guideOpen: boolean;
     selectedYear: number;
-    selectedTemplate: string;
+    selectedCountryCode: string;
     selectedServiceIds: string[];
     connecting: boolean;
 }
@@ -12,7 +12,7 @@ export interface AdminState {
 export type AdminAction =
     | { type: 'SET_STEP'; step: Step }
     | { type: 'SET_GUIDE_OPEN'; open: boolean }
-    | { type: 'SET_TEMPLATE'; template: string }
+    | { type: 'SET_COUNTRY'; countryCode: string }
     | { type: 'SET_SERVICES'; serviceIds: string[] }
     | { type: 'SET_CONNECTING'; connecting: boolean };
 
@@ -22,8 +22,8 @@ export const reducer = (state: AdminState, action: AdminAction): AdminState => {
             return { ...state, step: action.step };
         case 'SET_GUIDE_OPEN':
             return { ...state, guideOpen: action.open };
-        case 'SET_TEMPLATE':
-            return { ...state, selectedTemplate: action.template };
+        case 'SET_COUNTRY':
+            return { ...state, selectedCountryCode: action.countryCode };
         case 'SET_SERVICES':
             return { ...state, selectedServiceIds: action.serviceIds };
         case 'SET_CONNECTING':
@@ -35,13 +35,12 @@ export const reducer = (state: AdminState, action: AdminAction): AdminState => {
 
 export const createInitialState = (
     currentYear: number,
-    initialTemplate: string,
+    initialCountryCode: string,
 ): AdminState => ({
     step: 'home',
     guideOpen: false,
     selectedYear: currentYear,
-    selectedTemplate: initialTemplate,
+    selectedCountryCode: initialCountryCode,
     selectedServiceIds: [],
     connecting: false,
 });
-

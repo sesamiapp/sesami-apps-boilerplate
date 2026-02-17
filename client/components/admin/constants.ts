@@ -1,10 +1,6 @@
 export const MOCK_HOME_HOLIDAYS: Array<{ id: string; title: string }> = [];
 
-export const MOCK_TEMPLATE_OPTIONS = [
-    { label: 'Public Holidays', value: 'public-holidays' },
-    { label: 'Team Holidays', value: 'team-holidays' },
-    { label: 'Custom Holidays', value: 'custom-holidays' },
-];
+export const DEFAULT_COUNTRY_CODE = 'US';
 
 export const MOCK_SERVICES = [
     { id: 'service-1', label: 'Service A' },
@@ -16,4 +12,3 @@ export const MOCK_SERVICES = [
 
 export const GUIDE_TEXT =
     'This is a temporary guide message. We will replace it with final content later.';
-

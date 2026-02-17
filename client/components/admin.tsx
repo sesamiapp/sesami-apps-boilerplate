@@ -1,14 +1,19 @@
-import { useReducer } from 'react';
+import { useEffect, useMemo, useReducer, useState } from 'react';
 import { Modal, Typography, message } from 'antd';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AntdProvider, useSesami_AdminAppLoader } from '../hooks';
-import { apiRequest } from '../api';
 import {
+    apiRequest,
+    createResourceRequest,
+    retrieveServicesRequest,
+} from '../api';
+import {
+    DEFAULT_COUNTRY_CODE,
     GUIDE_TEXT,
     MOCK_HOME_HOLIDAYS,
     MOCK_SERVICES,
-    MOCK_TEMPLATE_OPTIONS,
 } from './admin/constants';
+import { getCountryOptions, getHolidaysByDate } from './admin/holiday-data';
 import { AddHolidayHeader } from './admin/steps/add-holiday/header';
 import { AddHolidayPanel } from './admin/steps/add-holiday/panel';
 import { ChooseServiceHeader } from './admin/steps/choose-service/header';
@@ -34,9 +39,23 @@ const AdminContent = () => {
     const Sesami = useSesami_AdminAppLoader();
 
     const currentYear = new Date().getFullYear();
+    const countryOptions = useMemo(() => getCountryOptions(), []);
+    const initialCountryCode = countryOptions.some(
+        ({ value }) => value === DEFAULT_COUNTRY_CODE,
+    )
+        ? DEFAULT_COUNTRY_CODE
+        : (countryOptions[0]?.value ?? DEFAULT_COUNTRY_CODE);
+
     const [state, dispatch] = useReducer(
         reducer,
-        createInitialState(currentYear, MOCK_TEMPLATE_OPTIONS[0].value),
+        createInitialState(currentYear, initialCountryCode),
+    );
+    const [services, setServices] = useState(MOCK_SERVICES);
+    const [isLoadingServices, setIsLoadingServices] = useState(false);
+    const [isCreatingResource, setIsCreatingResource] = useState(false);
+    const holidaysByDate = useMemo(
+        () => getHolidaysByDate(state.selectedCountryCode, state.selectedYear),
+        [state.selectedCountryCode, state.selectedYear],
     );
 
     if (!Sesami) {
@@ -57,7 +76,7 @@ const AdminContent = () => {
                 JSON.stringify({
                     shopId: Sesami.getShopId(),
                     year: state.selectedYear,
-                    holidayTemplate: state.selectedTemplate,
+                    countryCode: state.selectedCountryCode,
                     services: state.selectedServiceIds,
                 }),
             );
@@ -71,6 +90,83 @@ const AdminContent = () => {
             dispatch({ type: 'SET_STEP', step: 'home' });
         }
     };
+
+    const handleCreateResource = async () => {
+        setIsCreatingResource(true);
+        try {
+            await createResourceRequest(Sesami.getToken, {
+                shop: Sesami.getShopId(),
+                payload: {
+                    typeId: 'REPLACE_TYPE_ID',
+                    name: 'REPLACE_RESOURCE_NAME',
+                    timezone: 'REPLACE_TIMEZONE',
+                    status: true,
+                    email: 'REPLACE_EMAIL',
+                    image: 'REPLACE_IMAGE_URL',
+                    availabilities: [],
+                    availabilitiesRange: {},
+                    description: 'REPLACE_DESCRIPTION',
+                    eventDescription: 'REPLACE_EVENT_DESCRIPTION',
+                    mobile: 'REPLACE_MOBILE',
+                    notificationEmailStatus: true,
+                },
+            });
+            message.success('Create resource request sent');
+        } catch (error) {
+            const errorMessage =
+                error instanceof Error ? error.message : 'Create resource request failed';
+            message.error(errorMessage);
+        } finally {
+            setIsCreatingResource(false);
+            dispatch({ type: 'SET_STEP', step: 'chooseService' });
+        }
+    };
+
+    useEffect(() => {
+        if (state.step !== 'chooseService') {
+            return;
+        }
+
+        let isActive = true;
+        const fetchServices = async () => {
+            setIsLoadingServices(true);
+            try {
+                const response = await retrieveServicesRequest(Sesami.getToken, {
+                    shop: Sesami.getShopId(),
+                    limit: 10,
+                    after: undefined,
+                    before: undefined,
+                    searchTerm: undefined,
+                    status: undefined,
+                });
+                if (!isActive) {
+                    return;
+                }
+
+                const fetchedServices = mapServicesResponse(response);
+                setServices(fetchedServices);
+            } catch (error) {
+                if (!isActive) {
+                    return;
+                }
+                const errorMessage =
+                    error instanceof Error
+                        ? error.message
+                        : 'Retrieve services request failed';
+                message.error(errorMessage);
+                setServices([]);
+            } finally {
+                if (isActive) {
+                    setIsLoadingServices(false);
+                }
+            }
+        };
+
+        void fetchServices();
+        return () => {
+            isActive = false;
+        };
+    }, [Sesami, state.step]);
 
     const renderHeader = () => {
         if (state.step === 'home') {
@@ -87,16 +183,15 @@ const AdminContent = () => {
         if (state.step === 'addHoliday') {
             return (
                 <AddHolidayHeader
-                    selectedTemplate={state.selectedTemplate}
-                    templateOptions={MOCK_TEMPLATE_OPTIONS}
-                    onTemplateChange={(template) =>
-                        dispatch({ type: 'SET_TEMPLATE', template })
+                    selectedCountryCode={state.selectedCountryCode}
+                    countryOptions={countryOptions}
+                    onCountryChange={(countryCode) =>
+                        dispatch({ type: 'SET_COUNTRY', countryCode })
                     }
+                    creatingResource={isCreatingResource}
                     onGuide={openGuide}
                     onCancel={() => dispatch({ type: 'SET_STEP', step: 'home' })}
-                    onCreate={() =>
-                        dispatch({ type: 'SET_STEP', step: 'chooseService' })
-                    }
+                    onCreate={handleCreateResource}
                 />
             );
         }
@@ -116,15 +211,22 @@ const AdminContent = () => {
     };
 
     const renderAddHolidayPanel = () => {
-        return <AddHolidayPanel selectedYear={state.selectedYear} />;
+        return (
+            <AddHolidayPanel
+                selectedYear={state.selectedYear}
+                holidaysByDate={holidaysByDate}
+            />
+        );
     };
 
     const renderChooseServicePanel = () => {
         return (
             <ChooseServicePanel
                 selectedYear={state.selectedYear}
+                holidaysByDate={holidaysByDate}
                 selectedServiceIds={state.selectedServiceIds}
-                services={MOCK_SERVICES}
+                services={services}
+                isLoadingServices={isLoadingServices}
                 onServicesChange={(serviceIds) =>
                     dispatch({ type: 'SET_SERVICES', serviceIds })
                 }
@@ -163,6 +265,27 @@ const AdminContent = () => {
 
 const localStyles = {
     page: {},
+};
+
+const mapServicesResponse = (
+    response: any,
+): Array<{ id: string; label: string }> => {
+    if (!response || !Array.isArray(response.data)) {
+        return [];
+    }
+
+    return response.data
+        .map((service: any) => ({
+            id: String(service?.id ?? ''),
+            label: String(
+                service?.name ??
+                    service?.title ??
+                    service?.description ??
+                    service?.id ??
+                    '',
+            ),
+        }))
+        .filter((service: { id: string; label: string }) => service.id.length > 0);
 };
 
 export default Admin;

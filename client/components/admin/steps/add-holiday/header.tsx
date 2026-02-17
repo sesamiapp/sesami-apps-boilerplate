@@ -5,18 +5,20 @@ import { styles } from '../../styles';
 const { Title, Text } = Typography;
 
 interface AddHolidayHeaderProps {
-    selectedTemplate: string;
-    templateOptions: Array<{ label: string; value: string }>;
-    onTemplateChange: (template: string) => void;
+    selectedCountryCode: string;
+    countryOptions: Array<{ label: string; value: string }>;
+    onCountryChange: (countryCode: string) => void;
+    creatingResource: boolean;
     onGuide: () => void;
     onCancel: () => void;
     onCreate: () => void;
 }
 
 export const AddHolidayHeader = ({
-    selectedTemplate,
-    templateOptions,
-    onTemplateChange,
+    selectedCountryCode,
+    countryOptions,
+    onCountryChange,
+    creatingResource,
     onGuide,
     onCancel,
     onCreate,
@@ -31,16 +33,18 @@ export const AddHolidayHeader = ({
                 </div>
                 <Select
                     style={localStyles.templateSelect}
-                    value={selectedTemplate}
-                    options={templateOptions}
-                    onChange={onTemplateChange}
+                    value={selectedCountryCode}
+                    options={countryOptions}
+                    onChange={onCountryChange}
+                    showSearch
+                    optionFilterProp="label"
                 />
             </div>
 
             <div style={styles.buttonRow}>
                 <Button onClick={onGuide}>Guide</Button>
                 <Button onClick={onCancel}>Cancel</Button>
-                <Button type="primary" onClick={onCreate}>
+                <Button type="primary" loading={creatingResource} onClick={onCreate}>
                     Create
                 </Button>
             </div>

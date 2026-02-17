@@ -6,15 +6,19 @@ const { Text } = Typography;
 
 interface ChooseServicePanelProps {
     selectedYear: number;
+    holidaysByDate: Record<string, string[]>;
     selectedServiceIds: string[];
     services: Array<{ id: string; label: string }>;
+    isLoadingServices: boolean;
     onServicesChange: (serviceIds: string[]) => void;
 }
 
 export const ChooseServicePanel = ({
     selectedYear,
+    holidaysByDate,
     selectedServiceIds,
     services,
+    isLoadingServices,
     onServicesChange,
 }: ChooseServicePanelProps) => {
     return (
@@ -23,6 +27,7 @@ export const ChooseServicePanel = ({
                 <MonthGrid
                     columns={2}
                     year={selectedYear}
+                    holidaysByDate={holidaysByDate}
                     useViewportHeight={false}
                 />
             </div>
@@ -32,7 +37,9 @@ export const ChooseServicePanel = ({
                     Services
                 </Text>
                 <Text type="secondary" style={localStyles.servicesSubtitle}>
-                    Mock list for now
+                    {isLoadingServices
+                        ? 'Loading services...'
+                        : 'Select services to connect'}
                 </Text>
 
                 <Checkbox.Group

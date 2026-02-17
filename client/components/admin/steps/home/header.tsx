@@ -15,7 +15,6 @@ export const HomeHeader = ({ onGuide, onApplyHoliday }: HomeHeaderProps) => {
                 <Title level={4} style={{ margin: 0 }}>
                     Holiday Dashboard
                 </Title>
-                <Text type="secondary">Manage yearly vacation setup</Text>
             </div>
 
             <div style={styles.buttonRow}>

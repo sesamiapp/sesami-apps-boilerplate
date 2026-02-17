@@ -3,12 +3,20 @@ import { MonthGrid } from '../../month-grid';
 
 interface AddHolidayPanelProps {
     selectedYear: number;
+    holidaysByDate: Record<string, string[]>;
 }
 
-export const AddHolidayPanel = ({ selectedYear }: AddHolidayPanelProps) => {
+export const AddHolidayPanel = ({
+    selectedYear,
+    holidaysByDate,
+}: AddHolidayPanelProps) => {
     return (
         <div style={localStyles.root}>
-            <MonthGrid columns={4} year={selectedYear} />
+            <MonthGrid
+                columns={4}
+                year={selectedYear}
+                holidaysByDate={holidaysByDate}
+            />
         </div>
     );
 };
