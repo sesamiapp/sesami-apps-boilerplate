@@ -2,16 +2,17 @@ import { useEffect, useMemo, useReducer, useState } from 'react';
 import { Modal, Typography, message } from 'antd';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AntdProvider, useSesami_AdminAppLoader } from '../hooks';
+import { apiRequest } from '../api';
 import {
-    apiRequest,
     createResourceRequest,
+    retrieveResourcesRequest,
+    retrieveServiceByIdRequest,
     retrieveServicesRequest,
-} from '../api';
+    updateServiceRequest,
+} from '../sesami-api/sesami.api';
 import {
     DEFAULT_COUNTRY_CODE,
     GUIDE_TEXT,
-    MOCK_HOME_HOLIDAYS,
-    MOCK_SERVICES,
 } from './admin/constants';
 import { getCountryOptions, getHolidaysByDate } from './admin/holiday-data';
 import { AddHolidayHeader } from './admin/steps/add-holiday/header';
@@ -26,6 +27,20 @@ import { styles } from './admin/styles';
 const { Text } = Typography;
 
 const queryClient = new QueryClient();
+
+interface HomeResourceRow {
+    id: string;
+    cursor: string;
+    name: string;
+    type: string;
+    timezone: string;
+    status: boolean;
+    email: string;
+    mobile: string;
+    shopId: string;
+    description: string;
+    eventDescription: string;
+}
 
 export const Admin = () => (
     <QueryClientProvider client={queryClient}>
@@ -50,7 +65,10 @@ const AdminContent = () => {
         reducer,
         createInitialState(currentYear, initialCountryCode),
     );
-    const [services, setServices] = useState(MOCK_SERVICES);
+    const [resources, setResources] = useState<HomeResourceRow[]>([]);
+    const [services, setServices] = useState<Array<{ id: string; label: string }>>(
+        [],
+    );
     const [isLoadingServices, setIsLoadingServices] = useState(false);
     const [isCreatingResource, setIsCreatingResource] = useState(false);
     const holidaysByDate = useMemo(
@@ -59,7 +77,40 @@ const AdminContent = () => {
     );
 
     useEffect(() => {
-        if (!Sesami || state.step !== 'chooseService') {
+        let isActive = true;
+
+        const fetchResources = async () => {
+            try {
+                const response = await retrieveResourcesRequest({
+                    limit: 50,
+                });
+                if (!isActive) {
+                    return;
+                }
+
+                const fetchedResources = mapResourcesResponse(response);
+                setResources(fetchedResources);
+            } catch (error) {
+                if (!isActive) {
+                    return;
+                }
+                const errorMessage =
+                    error instanceof Error
+                        ? error.message
+                        : 'Retrieve resources request failed';
+                message.error(errorMessage);
+                setResources([]);
+            }
+        };
+
+        void fetchResources();
+        return () => {
+            isActive = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (state.step !== 'chooseService') {
             return;
         }
 
@@ -67,13 +118,8 @@ const AdminContent = () => {
         const fetchServices = async () => {
             setIsLoadingServices(true);
             try {
-                const response = await retrieveServicesRequest(Sesami.getToken, {
-                    shop: Sesami.getShopId(),
-                    limit: 10,
-                    after: undefined,
-                    before: undefined,
-                    searchTerm: undefined,
-                    status: undefined,
+                const response = await retrieveServicesRequest({
+                    limit: 50,
                 });
                 if (!isActive) {
                     return;
@@ -102,7 +148,7 @@ const AdminContent = () => {
         return () => {
             isActive = false;
         };
-    }, [Sesami, state.step]);
+    }, [state.step]);
 
     if (!Sesami) {
         return 'loading...';
@@ -116,17 +162,81 @@ const AdminContent = () => {
         dispatch({ type: 'SET_CONNECTING', connecting: true });
 
         try {
-            await apiRequest(Sesami.getToken)(
-                '/api/v1/holiday/connect',
-                'POST',
-                JSON.stringify({
-                    shopId: Sesami.getShopId(),
-                    year: state.selectedYear,
-                    countryCode: state.selectedCountryCode,
-                    services: state.selectedServiceIds,
-                }),
-            );
-            message.success('Holiday setup connected');
+            if (!state.createdResourceId) {
+                message.error('No created resource to connect. Create the resource first.');
+                return;
+            }
+            const createdResourceId = state.createdResourceId;
+            if (state.selectedServiceIds.length === 0) {
+                message.error('No services selected.');
+                return;
+            }
+
+            for (const serviceId of state.selectedServiceIds) {
+                const service = await retrieveServiceByIdRequest({ id: serviceId });
+                const locations: any[] = Array.isArray(service?.locations) ? service.locations : [];
+
+                if (locations.length === 0) {
+                    throw new Error(`Service ${serviceId} has no locations to attach resources to`);
+                }
+
+                const nextLocationResources = locations.map((loc) => {
+                    const existing: any[] = Array.isArray(loc?.resources) ? loc.resources : [];
+                    const typeId = state.resourceDraft.typeId.trim();
+                    const existingIdx = existing.findIndex((r) => r?.typeId === typeId);
+
+                    if (existingIdx === -1) {
+                        return {
+                            locationId: String(loc?.locationId ?? ''),
+                            resources: [
+                                ...existing,
+                                {
+                                    typeId,
+                                    isSelectable: false,
+                                    blocksDuringAppointment: true,
+                                    ids: [createdResourceId],
+                                    hideAnyAvailable: false,
+                                },
+                            ],
+                        };
+                    }
+
+                    const current = existing[existingIdx]!;
+                    const ids = Array.isArray(current.ids) ? current.ids.map(String) : [];
+                    const nextIds = ids.includes(createdResourceId)
+                        ? ids
+                        : [...ids, createdResourceId];
+
+                    const nextResources = [...existing];
+                    nextResources[existingIdx] = {
+                        typeId,
+                        isSelectable: Boolean(current.isSelectable),
+                        blocksDuringAppointment: true,
+                        ids: nextIds,
+                        hideAnyAvailable: Boolean(current.hideAnyAvailable),
+                    };
+
+                    return {
+                        locationId: String(loc?.locationId ?? ''),
+                        resources: nextResources.map((r) => ({
+                            typeId: String(r.typeId ?? ''),
+                            isSelectable: Boolean(r.isSelectable),
+                            blocksDuringAppointment: true,
+                            ids: Array.isArray(r.ids) ? r.ids.map(String) : [],
+                            hideAnyAvailable: Boolean(r.hideAnyAvailable),
+                        })),
+                    };
+                });
+
+                await updateServiceRequest({
+                    id: serviceId,
+                    payload: {
+                        locationResources: nextLocationResources,
+                    },
+                });
+            }
+
+            message.success('Holiday setup connected (services updated)');
         } catch (error) {
             const errorMessage =
                 error instanceof Error ? error.message : 'Connect request failed';
@@ -140,22 +250,68 @@ const AdminContent = () => {
     const handleCreateResource = async () => {
         setIsCreatingResource(true);
         try {
-            await createResourceRequest(Sesami.getToken, {
-                shop: Sesami.getShopId(),
+            if (!state.resourceDraft.typeId.trim()) {
+                message.error('Missing resource typeId');
+                return;
+            }
+            const resourceName = state.resourceDraft.name.trim()
+                ? state.resourceDraft.name.trim()
+                : `Holiday - ${state.selectedCountryCode}`;
+
+            const holidayDates = Object.keys(holidaysByDate).sort();
+            const weekdayAvailabilities = [
+                'sunday',
+                'monday',
+                'tuesday',
+                'wednesday',
+                'thursday',
+                'friday',
+                'saturday',
+            ].map((weekday) => ({
+                type: 'wday',
+                weekday,
+                intervals: [
+                    {
+                        from: '00:00',
+                        to: '23:59',
+                    },
+                ],
+            }));
+
+            const holidayOverrides = holidayDates.map((date) => ({
+                type: 'date',
+                date,
+                intervals: [],
+            }));
+
+            const availabilities = [...weekdayAvailabilities, ...holidayOverrides];
+
+            const created = await createResourceRequest({
                 payload: {
-                    typeId: 'REPLACE_TYPE_ID',
-                    name: 'REPLACE_RESOURCE_NAME',
-                    timezone: 'REPLACE_TIMEZONE',
+                    typeId: state.resourceDraft.typeId.trim(),
+                    name: resourceName,
+                    timezone: state.resourceDraft.timezone.trim() || undefined,
                     status: true,
-                    email: 'REPLACE_EMAIL',
-                    image: 'REPLACE_IMAGE_URL',
-                    availabilities: [],
-                    availabilitiesRange: {},
-                    description: 'REPLACE_DESCRIPTION',
-                    eventDescription: 'REPLACE_EVENT_DESCRIPTION',
-                    mobile: 'REPLACE_MOBILE',
-                    notificationEmailStatus: true,
+                    email: undefined,
+                    image: undefined,
+                    availabilities,
+                    availabilitiesRange: {
+                        availableFrom: {
+                            type: 'NOW',
+                        },
+                        availableTo: {
+                            type: 'INDEFINITELY',
+                        },
+                    },
+                    description: undefined,
+                    eventDescription: undefined,
+                    mobile: undefined,
+                    notificationEmailStatus: undefined,
                 },
+            });
+            dispatch({
+                type: 'SET_CREATED_RESOURCE_ID',
+                id: created?.id ? String(created.id) : null,
             });
             message.success('Create resource request sent');
         } catch (error) {
@@ -207,7 +363,7 @@ const AdminContent = () => {
     };
 
     const renderHomePanel = () => {
-        return <HomePanel holidays={MOCK_HOME_HOLIDAYS} />;
+        return <HomePanel resources={resources} />;
     };
 
     const renderAddHolidayPanel = () => {
@@ -215,6 +371,18 @@ const AdminContent = () => {
             <AddHolidayPanel
                 selectedYear={state.selectedYear}
                 holidaysByDate={holidaysByDate}
+                typeId={state.resourceDraft.typeId}
+                name={state.resourceDraft.name}
+                timezone={state.resourceDraft.timezone}
+                onTypeIdChange={(typeId) =>
+                    dispatch({ type: 'SET_RESOURCE_DRAFT', draft: { typeId } })
+                }
+                onNameChange={(name) =>
+                    dispatch({ type: 'SET_RESOURCE_DRAFT', draft: { name } })
+                }
+                onTimezoneChange={(timezone) =>
+                    dispatch({ type: 'SET_RESOURCE_DRAFT', draft: { timezone } })
+                }
             />
         );
     };
@@ -286,6 +454,33 @@ const mapServicesResponse = (
             ),
         }))
         .filter((service: { id: string; label: string }) => service.id.length > 0);
+};
+
+const mapResourcesResponse = (
+    response: any,
+): HomeResourceRow[] => {
+    if (!response || !Array.isArray(response.data)) {
+        return [];
+    }
+
+    return response.data
+        .map((resource: any) => ({
+            id: String(resource?.id ?? ''),
+            cursor: String(resource?.cursor ?? ''),
+            name: String(resource?.name ?? ''),
+            type: String(resource?.type ?? ''),
+            timezone: String(resource?.timezone ?? ''),
+            status: Boolean(resource?.status),
+            email: String(resource?.email ?? ''),
+            mobile: String(resource?.mobile ?? ''),
+            shopId: String(resource?.shopId ?? ''),
+            description: String(resource?.description ?? ''),
+            eventDescription: String(resource?.eventDescription ?? ''),
+        }))
+        .filter(
+            (resource: HomeResourceRow) =>
+                resource.id.length > 0 && resource.name.length > 0,
+        );
 };
 
 export default Admin;

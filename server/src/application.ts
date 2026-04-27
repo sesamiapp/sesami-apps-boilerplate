@@ -10,6 +10,7 @@ import {
     UnauthenticatedError,
 } from './sesami/exceptions';
 import { InstallationController } from './sesami/api/installation';
+import { sesamiAdminProxyRoute } from './sesami/api/admin-proxy';
 import { InstallationService } from './sesami/installation';
 import { webhookRoute } from './sesami/api/webhook';
 import { isAuthenticatedRequest } from './sesami/authentication/helper';
@@ -57,6 +58,8 @@ app.get(
 app.get('/health', async (_req: Request, res: Response) => {
     res.status(200).send('Ok');
 });
+
+app.use('/api/sesami', sesamiAdminProxyRoute);
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     errorHandler.handleError(err, res);

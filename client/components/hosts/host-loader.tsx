@@ -10,7 +10,9 @@ import { worker } from '../../msw/msw-node'
     When you are on dev mode, it activates the MSW to mock the API calls to the Admin.
 */
 
-worker.start()
+worker.start({
+    onUnhandledRequest: 'bypass',
+})
 
 const HostLoader = ({ target, children }: PropsWithChildren<{ target: AppTarget }>) => {
     if(!window.location.href.includes('messageId')){ // first load: wrapper
