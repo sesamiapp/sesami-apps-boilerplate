@@ -8,6 +8,8 @@ services:
     ports:
       - 3000:3000
       - 9229:9229
+    env_file:
+      - .env
     environment:
       DATABASE_URL: mongodb://root:prisma@mongodb:27017/sesami-app?authSource=admin&directConnection=true
       PORT: 3000

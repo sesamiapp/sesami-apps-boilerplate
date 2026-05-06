@@ -1,7 +1,7 @@
 import { Button, Typography } from 'antd';
 import { styles } from '../../styles';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 interface HomeHeaderProps {
     onGuide: () => void;

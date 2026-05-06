@@ -124,3 +124,39 @@ sesamiAdminProxyRoute.post(
     },
 );
 
+sesamiAdminProxyRoute.get(
+    '/resources/:id',
+    async (req: Request, res: Response, next: NextFunction) => {
+        const shop = requiredEnv('sesami_ADMIN_SHOP_ID');
+        const { id } = req.params;
+        const url = `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shop)}/resources/${encodeURIComponent(
+            id,
+        )}`;
+        return forwardToSesami(req, res, next, url);
+    },
+);
+
+sesamiAdminProxyRoute.patch(
+    '/resources/:id',
+    async (req: Request, res: Response, next: NextFunction) => {
+        const shop = requiredEnv('sesami_ADMIN_SHOP_ID');
+        const { id } = req.params;
+        const url = `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shop)}/resources/${encodeURIComponent(
+            id,
+        )}`;
+        return forwardToSesami(req, res, next, url);
+    },
+);
+
+sesamiAdminProxyRoute.delete(
+    '/resources/:id',
+    async (req: Request, res: Response, next: NextFunction) => {
+        const shop = requiredEnv('sesami_ADMIN_SHOP_ID');
+        const { id } = req.params;
+        const url = `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shop)}/resources/${encodeURIComponent(
+            id,
+        )}`;
+        return forwardToSesami(req, res, next, url);
+    },
+);
+

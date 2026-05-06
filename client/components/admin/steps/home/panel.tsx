@@ -8,6 +8,7 @@ interface HomePanelProps {
         id: string;
         cursor: string;
         name: string;
+        typeId: string;
         type: string;
         timezone: string;
         status: boolean;
@@ -18,9 +19,18 @@ interface HomePanelProps {
         eventDescription: string;
     }>;
     loading: boolean;
+    onApplyToService: (resource: { id: string; typeId: string; name: string; timezone: string }) => void;
+    onEdit: (resource: { id: string; typeId: string; name: string; timezone: string }) => void;
+    onRemove: (resource: { id: string; typeId: string; name: string }) => void;
 }
 
-export const HomePanel = ({ resources, loading }: HomePanelProps) => {
+export const HomePanel = ({
+    resources,
+    loading,
+    onApplyToService,
+    onEdit,
+    onRemove,
+}: HomePanelProps) => {
     if (loading) {
         return (
             <div style={{ ...localStyles.root, ...localStyles.emptyRoot }}>
@@ -52,7 +62,7 @@ export const HomePanel = ({ resources, loading }: HomePanelProps) => {
                     <div style={{ ...localStyles.row, ...localStyles.headerRow }}>
                         <div style={localStyles.cell}>id</div>
                         <div style={localStyles.cell}>name</div>
-                        <div style={localStyles.cell}>type</div>
+                        <div style={localStyles.cell}>typeId</div>
                         <div style={localStyles.cell}>timezone</div>
                         <div style={localStyles.cell}>status</div>
                         <div style={localStyles.cell}>email</div>
@@ -67,7 +77,7 @@ export const HomePanel = ({ resources, loading }: HomePanelProps) => {
                         <div key={resource.id} style={localStyles.row}>
                             <div style={localStyles.cell}>{resource.id}</div>
                             <div style={localStyles.cell}>{resource.name}</div>
-                            <div style={localStyles.cell}>{resource.type}</div>
+                            <div style={localStyles.cell}>{resource.typeId}</div>
                             <div style={localStyles.cell}>{resource.timezone}</div>
                             <div style={localStyles.cell}>
                                 {resource.status ? 'true' : 'false'}
@@ -89,11 +99,42 @@ export const HomePanel = ({ resources, loading }: HomePanelProps) => {
                                 <Button
                                     style={localStyles.applyButton}
                                     type="primary"
+                                    onClick={() =>
+                                        onApplyToService({
+                                            id: resource.id,
+                                            typeId: resource.typeId,
+                                            name: resource.name,
+                                            timezone: resource.timezone,
+                                        })
+                                    }
                                 >
                                     Apply To Service
                                 </Button>
-                                <Button style={localStyles.editButton}>Edit</Button>
-                                <Button style={localStyles.removeButton}>Remove</Button>
+                                <Button
+                                    style={localStyles.editButton}
+                                    onClick={() =>
+                                        onEdit({
+                                            id: resource.id,
+                                            typeId: resource.typeId,
+                                            name: resource.name,
+                                            timezone: resource.timezone,
+                                        })
+                                    }
+                                >
+                                    Edit
+                                </Button>
+                                <Button
+                                    style={localStyles.removeButton}
+                                    onClick={() =>
+                                        onRemove({
+                                            id: resource.id,
+                                            typeId: resource.typeId,
+                                            name: resource.name,
+                                        })
+                                    }
+                                >
+                                    Remove
+                                </Button>
                             </div>
                         </div>
                     ))}

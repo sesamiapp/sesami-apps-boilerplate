@@ -1,10 +1,11 @@
 import { Button, Typography } from 'antd';
 import { styles } from '../../styles';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 interface ChooseServiceHeaderProps {
     connecting: boolean;
+    connectLabel?: string;
     onGuide: () => void;
     onDoLater: () => void;
     onConnect: () => void;
@@ -12,6 +13,7 @@ interface ChooseServiceHeaderProps {
 
 export const ChooseServiceHeader = ({
     connecting,
+    connectLabel,
     onGuide,
     onDoLater,
     onConnect,
@@ -28,7 +30,7 @@ export const ChooseServiceHeader = ({
                 <Button onClick={onGuide}>Guide</Button>
                 <Button onClick={onDoLater}>Do it later</Button>
                 <Button type="primary" loading={connecting} onClick={onConnect}>
-                    Connect
+                    {connectLabel ?? 'Connect'}
                 </Button>
             </div>
         </div>

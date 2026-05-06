@@ -35,7 +35,8 @@ class ErrorHandler {
         if (response) {
             response.status(HttpCode.INTERNAL_SERVER_ERROR).json({
                 message: 'Internal server error',
-                error: error,
+                errorName: (error as any)?.name ?? 'Error',
+                errorMessage: (error as any)?.message ?? String(error),
                 test: true,
             });
         }

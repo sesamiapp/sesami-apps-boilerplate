@@ -2,12 +2,14 @@ import { useEffect, useMemo, useReducer, useState } from 'react';
 import { Modal, Typography, message } from 'antd';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AntdProvider, useSesami_AdminAppLoader } from '../hooks';
-import { apiRequest } from '../api';
 import {
     createResourceRequest,
+    deleteResourceRequest,
+    retrieveResourceByIdRequest,
     retrieveResourcesRequest,
     retrieveServiceByIdRequest,
     retrieveServicesRequest,
+    updateResourceRequest,
     updateServiceRequest,
 } from '../sesami-api/sesami.api';
 import {
@@ -37,6 +39,7 @@ interface HomeResourceRow {
     id: string;
     cursor: string;
     name: string;
+    typeId: string;
     type: string;
     timezone: string;
     status: boolean;
@@ -198,17 +201,30 @@ const AdminContent = () => {
         dispatch({ type: 'SET_CONNECTING', connecting: true });
 
         try {
-            if (!state.createdResourceId) {
-                message.error('No created resource to connect. Create the resource first.');
+            const targetResourceId =
+                state.mode === 'create' ? state.createdResourceId : state.activeResourceId;
+            if (!targetResourceId) {
+                message.error('No resource selected to connect.');
                 return;
             }
-            const createdResourceId = state.createdResourceId;
             if (state.selectedServiceIds.length === 0) {
                 message.error('No services selected.');
                 return;
             }
 
-            for (const serviceId of state.selectedServiceIds) {
+            const selectedSet = new Set(state.selectedServiceIds.map(String));
+            const initialSet = new Set(state.initialSelectedServiceIds.map(String));
+
+            const servicesToAdd = Array.from(selectedSet).filter((id) => !initialSet.has(id));
+            const servicesToRemove = Array.from(initialSet).filter((id) => !selectedSet.has(id));
+
+            const typeId = state.resourceDraft.typeId.trim();
+            if (!typeId) {
+                message.error('Missing resource typeId');
+                return;
+            }
+
+            for (const serviceId of servicesToAdd) {
                 const service = await retrieveServiceByIdRequest({ id: serviceId });
                 const locations: any[] = Array.isArray(service?.locations) ? service.locations : [];
 
@@ -218,7 +234,6 @@ const AdminContent = () => {
 
                 const nextLocationResources = locations.map((loc) => {
                     const existing: any[] = Array.isArray(loc?.resources) ? loc.resources : [];
-                    const typeId = state.resourceDraft.typeId.trim();
                     const existingIdx = existing.findIndex((r) => r?.typeId === typeId);
 
                     if (existingIdx === -1) {
@@ -230,7 +245,7 @@ const AdminContent = () => {
                                     typeId,
                                     isSelectable: false,
                                     blocksDuringAppointment: true,
-                                    ids: [createdResourceId],
+                                    ids: [targetResourceId],
                                     hideAnyAvailable: false,
                                 },
                             ],
@@ -239,9 +254,9 @@ const AdminContent = () => {
 
                     const current = existing[existingIdx]!;
                     const ids = Array.isArray(current.ids) ? current.ids.map(String) : [];
-                    const nextIds = ids.includes(createdResourceId)
+                    const nextIds = ids.includes(targetResourceId)
                         ? ids
-                        : [...ids, createdResourceId];
+                        : [...ids, targetResourceId];
 
                     const nextResources = [...existing];
                     nextResources[existingIdx] = {
@@ -272,7 +287,52 @@ const AdminContent = () => {
                 });
             }
 
-            message.success('Holiday setup connected (services updated)');
+            for (const serviceId of servicesToRemove) {
+                const service = await retrieveServiceByIdRequest({ id: serviceId });
+                const locations: any[] = Array.isArray(service?.locations) ? service.locations : [];
+                if (locations.length === 0) {
+                    continue;
+                }
+
+                const nextLocationResources = locations.map((loc) => {
+                    const existing: any[] = Array.isArray(loc?.resources) ? loc.resources : [];
+                    const nextResources = existing
+                        .map((r) => {
+                            if (String(r?.typeId ?? '') !== typeId) {
+                                return r;
+                            }
+                            const ids: string[] = Array.isArray(r?.ids)
+                                ? (r.ids as any[]).map((value) => String(value))
+                                : [];
+                            const nextIds = ids.filter((id: string) => id !== targetResourceId);
+                            return { ...r, ids: nextIds };
+                        })
+                        .filter((r) => {
+                            if (String(r?.typeId ?? '') !== typeId) return true;
+                            const ids = Array.isArray(r?.ids) ? r.ids : [];
+                            return ids.length > 0;
+                        })
+                        .map((r) => ({
+                            typeId: String(r.typeId ?? ''),
+                            isSelectable: Boolean(r.isSelectable),
+                            blocksDuringAppointment: true,
+                            ids: Array.isArray(r.ids) ? r.ids.map(String) : [],
+                            hideAnyAvailable: Boolean(r.hideAnyAvailable),
+                        }));
+
+                    return {
+                        locationId: String(loc?.locationId ?? ''),
+                        resources: nextResources,
+                    };
+                });
+
+                await updateServiceRequest({
+                    id: serviceId,
+                    payload: { locationResources: nextLocationResources },
+                });
+            }
+
+            message.success(state.mode === 'apply' ? 'Services updated' : 'Services connected');
         } catch (error) {
             const errorMessage =
                 error instanceof Error ? error.message : 'Connect request failed';
@@ -280,12 +340,18 @@ const AdminContent = () => {
         } finally {
             dispatch({ type: 'SET_CONNECTING', connecting: false });
             dispatch({ type: 'SET_STEP', step: 'home' });
+            dispatch({ type: 'SET_MODE', mode: 'create' });
+            dispatch({ type: 'SET_ACTIVE_RESOURCE_ID', id: null });
+            dispatch({ type: 'SET_SERVICES', serviceIds: [] });
+            dispatch({ type: 'SET_INITIAL_SERVICES', serviceIds: [] });
         }
     };
 
     const handleCreateResource = async () => {
         setIsCreatingResource(true);
         try {
+            const isEdit = state.mode === 'edit';
+            const editId = state.activeResourceId;
             if (!state.resourceDraft.typeId.trim()) {
                 message.error('Missing resource typeId');
                 return;
@@ -322,41 +388,68 @@ const AdminContent = () => {
 
             const availabilities = [...weekdayAvailabilities, ...holidayOverrides];
 
-            const created = await createResourceRequest({
-                payload: {
-                    typeId: state.resourceDraft.typeId.trim(),
-                    name: resourceName,
-                    timezone: state.resourceDraft.timezone.trim() || undefined,
-                    status: true,
-                    email: undefined,
-                    image: undefined,
-                    availabilities,
-                    availabilitiesRange: {
-                        availableFrom: {
-                            type: 'NOW',
-                        },
-                        availableTo: {
-                            type: 'INDEFINITELY',
+            if (isEdit) {
+                if (!editId) {
+                    message.error('No resource selected to update.');
+                    return;
+                }
+                await updateResourceRequest({
+                    id: editId,
+                    payload: {
+                        typeId: state.resourceDraft.typeId.trim(),
+                        name: resourceName,
+                        timezone: state.resourceDraft.timezone.trim() || undefined,
+                        availabilities,
+                        availabilitiesRange: {
+                            availableFrom: { type: 'NOW' },
+                            availableTo: { type: 'INDEFINITELY' },
                         },
                     },
-                    description: undefined,
-                    eventDescription: undefined,
-                    mobile: undefined,
-                    notificationEmailStatus: undefined,
-                },
-            });
-            dispatch({
-                type: 'SET_CREATED_RESOURCE_ID',
-                id: created?.id ? String(created.id) : null,
-            });
-            message.success('Create resource request sent');
+                });
+                message.success('Resource updated');
+            } else {
+                const created = await createResourceRequest({
+                    payload: {
+                        typeId: state.resourceDraft.typeId.trim(),
+                        name: resourceName,
+                        timezone: state.resourceDraft.timezone.trim() || undefined,
+                        status: true,
+                        email: undefined,
+                        image: undefined,
+                        availabilities,
+                        availabilitiesRange: {
+                            availableFrom: {
+                                type: 'NOW',
+                            },
+                            availableTo: {
+                                type: 'INDEFINITELY',
+                            },
+                        },
+                        description: undefined,
+                        eventDescription: undefined,
+                        mobile: undefined,
+                        notificationEmailStatus: undefined,
+                    },
+                });
+                dispatch({
+                    type: 'SET_CREATED_RESOURCE_ID',
+                    id: created?.id ? String(created.id) : null,
+                });
+                message.success('Create resource request sent');
+            }
         } catch (error) {
             const errorMessage =
                 error instanceof Error ? error.message : 'Create resource request failed';
             message.error(errorMessage);
         } finally {
             setIsCreatingResource(false);
-            dispatch({ type: 'SET_STEP', step: 'chooseService' });
+            if (state.mode === 'edit') {
+                dispatch({ type: 'SET_STEP', step: 'home' });
+                dispatch({ type: 'SET_MODE', mode: 'create' });
+                dispatch({ type: 'SET_ACTIVE_RESOURCE_ID', id: null });
+            } else {
+                dispatch({ type: 'SET_STEP', step: 'chooseService' });
+            }
         }
     };
 
@@ -394,6 +487,7 @@ const AdminContent = () => {
                         dispatch({ type: 'SET_CREATED_RESOURCE_ID', id: null });
                     }}
                     creatingResource={isCreatingResource}
+                    createLabel={state.mode === 'edit' ? 'Update' : 'Create'}
                     onGuide={openGuide}
                     onCancel={() => dispatch({ type: 'SET_STEP', step: 'home' })}
                     onCreate={handleCreateResource}
@@ -404,6 +498,7 @@ const AdminContent = () => {
         return (
             <ChooseServiceHeader
                 connecting={state.connecting}
+                connectLabel={state.mode === 'apply' ? 'Update' : 'Connect'}
                 onGuide={openGuide}
                 onDoLater={() => dispatch({ type: 'SET_STEP', step: 'home' })}
                 onConnect={handleConnect}
@@ -412,7 +507,176 @@ const AdminContent = () => {
     };
 
     const renderHomePanel = () => {
-        return <HomePanel resources={resources} loading={isLoadingResources} />;
+        const resolveConnectedServiceIds = async (resourceId: string, typeId: string) => {
+            const serviceList = await retrieveServicesRequest({ limit: 50 });
+            const ids = Array.isArray(serviceList?.data)
+                ? serviceList.data.map((s: any) => String(s?.id ?? '')).filter((id: string) => id.length > 0)
+                : [];
+            if (ids.length === 0) return [];
+
+            const details = await Promise.all(
+                ids.map(async (serviceId: string) => {
+                    try {
+                        const svc = await retrieveServiceByIdRequest({ id: serviceId });
+                        return { serviceId, svc };
+                    } catch {
+                        return { serviceId, svc: null };
+                    }
+                }),
+            );
+
+            return details
+                .filter(({ svc }) => svc && Array.isArray((svc as any).locations))
+                .filter(({ svc }) => {
+                    const locations: any[] = Array.isArray((svc as any).locations)
+                        ? (svc as any).locations
+                        : [];
+                    return locations.some((loc) => {
+                        const res: any[] = Array.isArray(loc?.resources) ? loc.resources : [];
+                        const match = res.find((r) => String(r?.typeId ?? '') === typeId);
+                        const ids = Array.isArray(match?.ids) ? match.ids.map(String) : [];
+                        return ids.includes(resourceId);
+                    });
+                })
+                .map(({ serviceId }) => serviceId);
+        };
+
+        const onApplyToService = async (resource: {
+            id: string;
+            typeId: string;
+            name: string;
+            timezone: string;
+        }) => {
+            try {
+                dispatch({ type: 'SET_MODE', mode: 'apply' });
+                dispatch({ type: 'SET_ACTIVE_RESOURCE_ID', id: resource.id });
+                dispatch({ type: 'SET_RESOURCE_DRAFT', draft: { typeId: resource.typeId } });
+                const connected = await resolveConnectedServiceIds(resource.id, resource.typeId);
+                dispatch({ type: 'SET_SERVICES', serviceIds: connected });
+                dispatch({ type: 'SET_INITIAL_SERVICES', serviceIds: connected });
+                dispatch({ type: 'SET_STEP', step: 'chooseService' });
+            } catch (error) {
+                const errorMessage =
+                    error instanceof Error ? error.message : 'Failed to load connected services';
+                message.error(errorMessage);
+            }
+        };
+
+        const onEdit = async (resource: {
+            id: string;
+            typeId: string;
+            name: string;
+            timezone: string;
+        }) => {
+            dispatch({ type: 'SET_MODE', mode: 'edit' });
+            dispatch({ type: 'SET_ACTIVE_RESOURCE_ID', id: resource.id });
+            dispatch({
+                type: 'SET_RESOURCE_DRAFT',
+                draft: {
+                    typeId: resource.typeId,
+                    name: resource.name,
+                    timezone: resource.timezone,
+                    nameTouched: true,
+                },
+            });
+
+            try {
+                const full = await retrieveResourceByIdRequest({ id: resource.id });
+                const nextName = String(full?.name ?? resource.name ?? '');
+                const nextTimezone = String(full?.timezone ?? resource.timezone ?? '');
+                const nextTypeId = String(full?.typeId ?? resource.typeId ?? '');
+                dispatch({
+                    type: 'SET_RESOURCE_DRAFT',
+                    draft: {
+                        typeId: nextTypeId,
+                        name: nextName,
+                        timezone: nextTimezone,
+                        nameTouched: true,
+                    },
+                });
+            } catch {
+                // best-effort; we can edit based on row data
+            } finally {
+                dispatch({ type: 'SET_STEP', step: 'addHoliday' });
+            }
+        };
+
+        const onRemove = async (resource: { id: string; typeId: string; name: string }) => {
+            Modal.confirm({
+                title: 'Remove resource?',
+                content: `This will delete "${resource.name}" and detach it from connected services.`,
+                okText: 'Remove',
+                okButtonProps: { danger: true },
+                cancelText: 'Cancel',
+                onOk: async () => {
+                    try {
+                        const connected = await resolveConnectedServiceIds(resource.id, resource.typeId);
+                        for (const serviceId of connected) {
+                            const service = await retrieveServiceByIdRequest({ id: serviceId });
+                            const locations: any[] = Array.isArray(service?.locations)
+                                ? service.locations
+                                : [];
+                            if (locations.length === 0) continue;
+
+                            const nextLocationResources = locations.map((loc) => {
+                                const existing: any[] = Array.isArray(loc?.resources) ? loc.resources : [];
+                                const nextResources = existing
+                                    .map((r) => {
+                                        if (String(r?.typeId ?? '') !== resource.typeId) return r;
+                                        const ids: string[] = Array.isArray(r?.ids)
+                                            ? (r.ids as any[]).map((value) => String(value))
+                                            : [];
+                                        const nextIds = ids.filter((id: string) => id !== resource.id);
+                                        return { ...r, ids: nextIds };
+                                    })
+                                    .filter((r) => {
+                                        if (String(r?.typeId ?? '') !== resource.typeId) return true;
+                                        const ids = Array.isArray(r?.ids) ? r.ids : [];
+                                        return ids.length > 0;
+                                    })
+                                    .map((r) => ({
+                                        typeId: String(r.typeId ?? ''),
+                                        isSelectable: Boolean(r.isSelectable),
+                                        blocksDuringAppointment: true,
+                                        ids: Array.isArray(r.ids) ? r.ids.map(String) : [],
+                                        hideAnyAvailable: Boolean(r.hideAnyAvailable),
+                                    }));
+
+                                return {
+                                    locationId: String(loc?.locationId ?? ''),
+                                    resources: nextResources,
+                                };
+                            });
+
+                            await updateServiceRequest({
+                                id: serviceId,
+                                payload: { locationResources: nextLocationResources },
+                            });
+                        }
+
+                        await deleteResourceRequest({ id: resource.id });
+                        message.success('Resource removed');
+
+                        const response = await retrieveResourcesRequest({ limit: 50 });
+                        setResources(mapResourcesResponse(response));
+                    } catch (error) {
+                        const errorMessage =
+                            error instanceof Error ? error.message : 'Remove resource failed';
+                        message.error(errorMessage);
+                    }
+                },
+            });
+        };
+
+        return (
+            <HomePanel
+                resources={resources}
+                loading={isLoadingResources}
+                onApplyToService={onApplyToService}
+                onEdit={onEdit}
+                onRemove={onRemove}
+            />
+        );
     };
 
     const renderAddHolidayPanel = () => {
@@ -521,7 +785,8 @@ const mapResourcesResponse = (
             id: String(resource?.id ?? ''),
             cursor: String(resource?.cursor ?? ''),
             name: String(resource?.name ?? ''),
-            type: String(resource?.type ?? ''),
+            typeId: String(resource?.typeId ?? resource?.type ?? ''),
+            type: String(resource?.type ?? resource?.typeId ?? ''),
             timezone: String(resource?.timezone ?? ''),
             status: Boolean(resource?.status),
             email: String(resource?.email ?? ''),
