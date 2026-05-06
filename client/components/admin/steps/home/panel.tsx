@@ -1,5 +1,7 @@
-import { Button } from 'antd';
+import { Button, Spin, Typography } from 'antd';
 import { type CSSProperties } from 'react';
+
+const { Text } = Typography;
 
 interface HomePanelProps {
     resources: Array<{
@@ -15,9 +17,19 @@ interface HomePanelProps {
         description: string;
         eventDescription: string;
     }>;
+    loading: boolean;
 }
 
-export const HomePanel = ({ resources }: HomePanelProps) => {
+export const HomePanel = ({ resources, loading }: HomePanelProps) => {
+    if (loading) {
+        return (
+            <div style={{ ...localStyles.root, ...localStyles.emptyRoot }}>
+                <Spin />
+                <Text type="secondary">Loading resources...</Text>
+            </div>
+        );
+    }
+
     if (resources.length === 0) {
         return (
             <div style={{ ...localStyles.root, ...localStyles.emptyRoot }}>

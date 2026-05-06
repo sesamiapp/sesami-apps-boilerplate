@@ -4,6 +4,7 @@ export interface ResourceDraft {
     typeId: string;
     name: string;
     timezone: string;
+    nameTouched: boolean;
 }
 
 export interface AdminState {
@@ -61,12 +62,13 @@ export const createInitialState = (
     selectedServiceIds: [],
     connecting: false,
     resourceDraft: {
-        typeId: '',
+        typeId: '699df672c3387f3b24c31806',
         name: '',
         timezone:
             typeof Intl !== 'undefined'
                 ? Intl.DateTimeFormat().resolvedOptions().timeZone
                 : 'UTC',
+        nameTouched: false,
     },
     createdResourceId: null,
 });

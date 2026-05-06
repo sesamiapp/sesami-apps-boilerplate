@@ -1,4 +1,4 @@
-import { Input } from 'antd';
+import { Input, Select } from 'antd';
 import { type CSSProperties } from 'react';
 import { MonthGrid } from '../../month-grid';
 
@@ -8,6 +8,7 @@ interface AddHolidayPanelProps {
     typeId: string;
     name: string;
     timezone: string;
+    timezoneOptions: Array<{ label: string; value: string }>;
     onTypeIdChange: (value: string) => void;
     onNameChange: (value: string) => void;
     onTimezoneChange: (value: string) => void;
@@ -19,6 +20,7 @@ export const AddHolidayPanel = ({
     typeId,
     name,
     timezone,
+    timezoneOptions,
     onTypeIdChange,
     onNameChange,
     onTimezoneChange,
@@ -26,20 +28,26 @@ export const AddHolidayPanel = ({
     return (
         <div style={localStyles.root}>
             <div style={localStyles.formRow}>
-                <Input
-                    placeholder="Sesami resource typeId"
+                <Select
+                    placeholder="Resource type"
                     value={typeId}
-                    onChange={(e) => onTypeIdChange(e.target.value)}
+                    options={[
+                        { label: 'team', value: '699df672c3387f3b24c31806' },
+                    ]}
+                    onChange={onTypeIdChange}
                 />
                 <Input
                     placeholder="Resource name"
                     value={name}
                     onChange={(e) => onNameChange(e.target.value)}
                 />
-                <Input
-                    placeholder="Timezone (e.g. Europe/Paris)"
+                <Select
+                    showSearch
+                    placeholder="Timezone"
                     value={timezone}
-                    onChange={(e) => onTimezoneChange(e.target.value)}
+                    options={timezoneOptions}
+                    optionFilterProp="label"
+                    onChange={onTimezoneChange}
                 />
             </div>
             <MonthGrid

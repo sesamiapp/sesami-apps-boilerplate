@@ -58,6 +58,41 @@ export const getHolidaysByDate = (
     return holidaysByDate;
 };
 
+export const getCountryShortName = (countryCode: string): string => {
+    const upper = countryCode.toUpperCase();
+    const map: Record<string, string> = {
+        US: 'USA',
+        GB: 'UK',
+        AE: 'UAE',
+    };
+    return map[upper] ?? upper;
+};
+
+export const getSuggestedTimezones = (countryCode: string): string[] => {
+    const upper = countryCode.toUpperCase();
+    const map: Record<string, string[]> = {
+        US: [
+            'America/New_York',
+            'America/Chicago',
+            'America/Denver',
+            'America/Los_Angeles',
+        ],
+        GB: ['Europe/London'],
+        IR: ['Asia/Tehran'],
+        FR: ['Europe/Paris'],
+        DE: ['Europe/Berlin'],
+        ES: ['Europe/Madrid'],
+        IT: ['Europe/Rome'],
+        AE: ['Asia/Dubai'],
+        TR: ['Europe/Istanbul'],
+        CA: ['America/Toronto', 'America/Vancouver'],
+        AU: ['Australia/Sydney', 'Australia/Perth'],
+        IN: ['Asia/Kolkata'],
+        JP: ['Asia/Tokyo'],
+    };
+    return map[upper] ?? [];
+};
+
 const resolveDateKey = (holiday: HolidayData): string | null => {
     if (holiday.date) {
         return holiday.date.slice(0, 10);

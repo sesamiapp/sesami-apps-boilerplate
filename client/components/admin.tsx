@@ -14,7 +14,12 @@ import {
     DEFAULT_COUNTRY_CODE,
     GUIDE_TEXT,
 } from './admin/constants';
-import { getCountryOptions, getHolidaysByDate } from './admin/holiday-data';
+import {
+    getCountryOptions,
+    getCountryShortName,
+    getHolidaysByDate,
+    getSuggestedTimezones,
+} from './admin/holiday-data';
 import { AddHolidayHeader } from './admin/steps/add-holiday/header';
 import { AddHolidayPanel } from './admin/steps/add-holiday/panel';
 import { ChooseServiceHeader } from './admin/steps/choose-service/header';
@@ -69,6 +74,7 @@ const AdminContent = () => {
     const [services, setServices] = useState<Array<{ id: string; label: string }>>(
         [],
     );
+    const [isLoadingResources, setIsLoadingResources] = useState(false);
     const [isLoadingServices, setIsLoadingServices] = useState(false);
     const [isCreatingResource, setIsCreatingResource] = useState(false);
     const holidaysByDate = useMemo(
@@ -76,10 +82,36 @@ const AdminContent = () => {
         [state.selectedCountryCode, state.selectedYear],
     );
 
+    const timezoneOptions = useMemo(() => {
+        const suggested = getSuggestedTimezones(state.selectedCountryCode);
+        const current =
+            typeof Intl !== 'undefined'
+                ? Intl.DateTimeFormat().resolvedOptions().timeZone
+                : 'UTC';
+        const values = Array.from(new Set([...(suggested ?? []), state.resourceDraft.timezone, current]))
+            .filter(Boolean)
+            .slice(0, 8);
+        return values.map((tz) => ({ label: tz, value: tz }));
+    }, [state.selectedCountryCode, state.resourceDraft.timezone]);
+
     useEffect(() => {
+        if (state.resourceDraft.nameTouched) {
+            return;
+        }
+        const nextName = `${getCountryShortName(state.selectedCountryCode)} official holiday`;
+        if (state.resourceDraft.name !== nextName) {
+            dispatch({ type: 'SET_RESOURCE_DRAFT', draft: { name: nextName } });
+        }
+    }, [state.selectedCountryCode, state.resourceDraft.name, state.resourceDraft.nameTouched]);
+
+    useEffect(() => {
+        if (state.step !== 'home') {
+            return;
+        }
         let isActive = true;
 
         const fetchResources = async () => {
+            setIsLoadingResources(true);
             try {
                 const response = await retrieveResourcesRequest({
                     limit: 50,
@@ -100,6 +132,10 @@ const AdminContent = () => {
                         : 'Retrieve resources request failed';
                 message.error(errorMessage);
                 setResources([]);
+            } finally {
+                if (isActive) {
+                    setIsLoadingResources(false);
+                }
             }
         };
 
@@ -107,7 +143,7 @@ const AdminContent = () => {
         return () => {
             isActive = false;
         };
-    }, []);
+    }, [state.step]);
 
     useEffect(() => {
         if (state.step !== 'chooseService') {
@@ -256,7 +292,7 @@ const AdminContent = () => {
             }
             const resourceName = state.resourceDraft.name.trim()
                 ? state.resourceDraft.name.trim()
-                : `Holiday - ${state.selectedCountryCode}`;
+                : `${getCountryShortName(state.selectedCountryCode)} official holiday`;
 
             const holidayDates = Object.keys(holidaysByDate).sort();
             const weekdayAvailabilities = [
@@ -341,9 +377,22 @@ const AdminContent = () => {
                 <AddHolidayHeader
                     selectedCountryCode={state.selectedCountryCode}
                     countryOptions={countryOptions}
-                    onCountryChange={(countryCode) =>
-                        dispatch({ type: 'SET_COUNTRY', countryCode })
-                    }
+                    onCountryChange={(countryCode) => {
+                        dispatch({ type: 'SET_COUNTRY', countryCode });
+                        dispatch({
+                            type: 'SET_RESOURCE_DRAFT',
+                            draft: {
+                                name: `${getCountryShortName(countryCode)} official holiday`,
+                                nameTouched: false,
+                                timezone:
+                                    getSuggestedTimezones(countryCode)[0] ??
+                                    (typeof Intl !== 'undefined'
+                                        ? Intl.DateTimeFormat().resolvedOptions().timeZone
+                                        : 'UTC'),
+                            },
+                        });
+                        dispatch({ type: 'SET_CREATED_RESOURCE_ID', id: null });
+                    }}
                     creatingResource={isCreatingResource}
                     onGuide={openGuide}
                     onCancel={() => dispatch({ type: 'SET_STEP', step: 'home' })}
@@ -363,7 +412,7 @@ const AdminContent = () => {
     };
 
     const renderHomePanel = () => {
-        return <HomePanel resources={resources} />;
+        return <HomePanel resources={resources} loading={isLoadingResources} />;
     };
 
     const renderAddHolidayPanel = () => {
@@ -374,11 +423,15 @@ const AdminContent = () => {
                 typeId={state.resourceDraft.typeId}
                 name={state.resourceDraft.name}
                 timezone={state.resourceDraft.timezone}
+                timezoneOptions={timezoneOptions}
                 onTypeIdChange={(typeId) =>
                     dispatch({ type: 'SET_RESOURCE_DRAFT', draft: { typeId } })
                 }
                 onNameChange={(name) =>
-                    dispatch({ type: 'SET_RESOURCE_DRAFT', draft: { name } })
+                    dispatch({
+                        type: 'SET_RESOURCE_DRAFT',
+                        draft: { name, nameTouched: true },
+                    })
                 }
                 onTimezoneChange={(timezone) =>
                     dispatch({ type: 'SET_RESOURCE_DRAFT', draft: { timezone } })
