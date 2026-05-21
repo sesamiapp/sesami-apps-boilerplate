@@ -1,6 +1,16 @@
 type SesamiHttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-export function sesamiRequest() {
+function appendShopId(url: string | URL, shopId?: string): string {
+    const pathAndQuery = String(url);
+    if (!shopId) {
+        return pathAndQuery;
+    }
+    const parsed = new URL(pathAndQuery, 'http://localhost');
+    parsed.searchParams.set('shopId', shopId);
+    return `${parsed.pathname}${parsed.search}`;
+}
+
+export function sesamiRequest(shopId?: string) {
     return async (
         url: string | URL,
         method: SesamiHttpMethod = 'GET',
@@ -10,7 +20,7 @@ export function sesamiRequest() {
             'Content-Type': 'application/json',
         };
 
-        const response = await fetch(url, {
+        const response = await fetch(appendShopId(url, shopId), {
             method,
             headers,
             body: body === undefined ? undefined : JSON.stringify(body),
@@ -34,4 +44,3 @@ export function sesamiRequest() {
         return response.text();
     };
 }
-

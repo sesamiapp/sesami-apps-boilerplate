@@ -30,6 +30,7 @@ import { HomeHeader } from './admin/steps/home/header';
 import { HomePanel } from './admin/steps/home/panel';
 import { createInitialState, reducer } from './admin/state';
 import { styles } from './admin/styles';
+import * as mock from '../../data/mock';
 
 const { Text } = Typography;
 
@@ -60,6 +61,12 @@ export const Admin = () => (
 
 const AdminContent = () => {
     const Sesami = useSesami_AdminAppLoader();
+    const shopId = useMemo(
+        () =>
+            new URLSearchParams(window.location.search).get('shopId') ??
+            mock.shop.shopId,
+        [],
+    );
 
     const currentYear = new Date().getFullYear();
     const countryOptions = useMemo(() => getCountryOptions(), []);
@@ -117,6 +124,7 @@ const AdminContent = () => {
             setIsLoadingResources(true);
             try {
                 const response = await retrieveResourcesRequest({
+                    shopId,
                     limit: 50,
                 });
                 if (!isActive) {
@@ -146,7 +154,7 @@ const AdminContent = () => {
         return () => {
             isActive = false;
         };
-    }, [state.step]);
+    }, [state.step, shopId]);
 
     useEffect(() => {
         if (state.step !== 'chooseService') {
@@ -158,6 +166,7 @@ const AdminContent = () => {
             setIsLoadingServices(true);
             try {
                 const response = await retrieveServicesRequest({
+                    shopId,
                     limit: 50,
                 });
                 if (!isActive) {
@@ -187,7 +196,7 @@ const AdminContent = () => {
         return () => {
             isActive = false;
         };
-    }, [state.step]);
+    }, [state.step, shopId]);
 
     if (!Sesami) {
         return 'loading...';
@@ -225,7 +234,7 @@ const AdminContent = () => {
             }
 
             for (const serviceId of servicesToAdd) {
-                const service = await retrieveServiceByIdRequest({ id: serviceId });
+                const service = await retrieveServiceByIdRequest({ shopId, id: serviceId });
                 const locations: any[] = Array.isArray(service?.locations) ? service.locations : [];
 
                 if (locations.length === 0) {
@@ -280,6 +289,7 @@ const AdminContent = () => {
                 });
 
                 await updateServiceRequest({
+                    shopId,
                     id: serviceId,
                     payload: {
                         locationResources: nextLocationResources,
@@ -288,7 +298,7 @@ const AdminContent = () => {
             }
 
             for (const serviceId of servicesToRemove) {
-                const service = await retrieveServiceByIdRequest({ id: serviceId });
+                const service = await retrieveServiceByIdRequest({ shopId, id: serviceId });
                 const locations: any[] = Array.isArray(service?.locations) ? service.locations : [];
                 if (locations.length === 0) {
                     continue;
@@ -327,6 +337,7 @@ const AdminContent = () => {
                 });
 
                 await updateServiceRequest({
+                    shopId,
                     id: serviceId,
                     payload: { locationResources: nextLocationResources },
                 });
@@ -394,6 +405,7 @@ const AdminContent = () => {
                     return;
                 }
                 await updateResourceRequest({
+                    shopId,
                     id: editId,
                     payload: {
                         typeId: state.resourceDraft.typeId.trim(),
@@ -409,6 +421,7 @@ const AdminContent = () => {
                 message.success('Resource updated');
             } else {
                 const created = await createResourceRequest({
+                    shopId,
                     payload: {
                         typeId: state.resourceDraft.typeId.trim(),
                         name: resourceName,
@@ -508,7 +521,7 @@ const AdminContent = () => {
 
     const renderHomePanel = () => {
         const resolveConnectedServiceIds = async (resourceId: string, typeId: string) => {
-            const serviceList = await retrieveServicesRequest({ limit: 50 });
+            const serviceList = await retrieveServicesRequest({ shopId, limit: 50 });
             const ids = Array.isArray(serviceList?.data)
                 ? serviceList.data.map((s: any) => String(s?.id ?? '')).filter((id: string) => id.length > 0)
                 : [];
@@ -517,7 +530,7 @@ const AdminContent = () => {
             const details = await Promise.all(
                 ids.map(async (serviceId: string) => {
                     try {
-                        const svc = await retrieveServiceByIdRequest({ id: serviceId });
+                        const svc = await retrieveServiceByIdRequest({ shopId, id: serviceId });
                         return { serviceId, svc };
                     } catch {
                         return { serviceId, svc: null };
@@ -581,7 +594,10 @@ const AdminContent = () => {
             });
 
             try {
-                const full = await retrieveResourceByIdRequest({ id: resource.id });
+                const full = await retrieveResourceByIdRequest({
+                    shopId,
+                    id: resource.id,
+                });
                 const nextName = String(full?.name ?? resource.name ?? '');
                 const nextTimezone = String(full?.timezone ?? resource.timezone ?? '');
                 const nextTypeId = String(full?.typeId ?? resource.typeId ?? '');
@@ -612,7 +628,7 @@ const AdminContent = () => {
                     try {
                         const connected = await resolveConnectedServiceIds(resource.id, resource.typeId);
                         for (const serviceId of connected) {
-                            const service = await retrieveServiceByIdRequest({ id: serviceId });
+                            const service = await retrieveServiceByIdRequest({ shopId, id: serviceId });
                             const locations: any[] = Array.isArray(service?.locations)
                                 ? service.locations
                                 : [];
@@ -649,15 +665,19 @@ const AdminContent = () => {
                             });
 
                             await updateServiceRequest({
+                                shopId,
                                 id: serviceId,
                                 payload: { locationResources: nextLocationResources },
                             });
                         }
 
-                        await deleteResourceRequest({ id: resource.id });
+                        await deleteResourceRequest({ shopId, id: resource.id });
                         message.success('Resource removed');
 
-                        const response = await retrieveResourcesRequest({ limit: 50 });
+                        const response = await retrieveResourcesRequest({
+                            shopId,
+                            limit: 50,
+                        });
                         setResources(mapResourcesResponse(response));
                     } catch (error) {
                         const errorMessage =

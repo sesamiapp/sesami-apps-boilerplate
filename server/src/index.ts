@@ -1,10 +1,8 @@
-import dotenv from 'dotenv';
+import './loadEnv';
 import config from './sesami/config/Build.config';
 import { app, prisma } from './application';
 import { logger } from './sesami/logger';
 import ViteExpress from 'vite-express';
-
-dotenv.config();
 
 async function main() {
     prisma.$connect();

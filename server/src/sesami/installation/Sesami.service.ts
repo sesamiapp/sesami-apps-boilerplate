@@ -1,31 +1,23 @@
-import config from '../config/Build.config';
 import { ShopNotFoundById } from '../exceptions';
 import { logger } from '../logger';
-import { ShopRepository } from './Shop.repository';
+import config from '../config/Build.config';
 import { SesamiURL } from '../config/URL.config';
+import { buildOfflineAuthHeaders } from '../authentication/SesamiProxyAuth';
 
 export class SesamiService {
-    private static shopRepository = new ShopRepository();
-
-    public async getShopInformation(shopId: string): Promise<any> {
+    public async getShopInformation(sesamiShopId: string): Promise<any> {
         try {
-            const shop = await SesamiService.shopRepository.getById(shopId);
-            if (!shop) {
-                throw new ShopNotFoundById();
-            }
-            const apiKey = shop.apiKey;
-
             const url =
-                SesamiURL.api + SesamiURL.getShop.replace(':shopId', shopId);
-            const header = {
-                'x-api-key': `${apiKey}`,
-                'x-shop-id': `${shop.shopId}`,
-                'x-client-id': `${config.sesamiClientId}`,
-            };
+                SesamiURL.api +
+                SesamiURL.getShop.replace(':shopId', sesamiShopId);
+            const headers = await buildOfflineAuthHeaders(sesamiShopId);
             const response = await fetch(url, {
                 method: 'GET',
-                headers: header,
+                headers,
             });
+            if (!response.ok) {
+                throw new ShopNotFoundById({ sesamiShopId, status: response.status });
+            }
             return await response.json();
         } catch (error) {
             logger.error(`Error in getShopInformation: ${error}`);

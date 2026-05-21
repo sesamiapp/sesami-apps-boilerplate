@@ -37,7 +37,29 @@ DATABASE_URL=your-database-url
 SESAMI_CLIENT_ID=your-client-id
 SESAMI_CLIENT_SECRET=your-client-secret
 APP_DOMAIN=your-app-domain
+
+# Proxy auth: env (read/write API keys) or offline (per-shop OAuth token from DB)
+SESAMI_AUTH_MODE=env
+read_SESAMI_API_KEY=your-read-api-key
+read_SESAMI_CLIENT_ID=your-read-client-id
+write_SESAMI_API_KEY=your-write-api-key
+write_SESAMI_CLIENT_ID=your-write-client-id
+sesami_ADMIN_SHOP_ID=your-shop-id
 ```
+
+### Sesami API proxy authentication (`SESAMI_AUTH_MODE`)
+
+The admin UI calls `/api/sesami/*`, which forwards to `https://api.sesami.co`. Use `SESAMI_AUTH_MODE` to choose how those upstream calls are authenticated:
+
+| Mode | Value | Upstream headers | Shop in URL |
+|------|-------|------------------|-------------|
+| Env keys (default) | `env` | `read_SESAMI_API_KEY` / `write_SESAMI_API_KEY` and matching client IDs | `sesami_ADMIN_SHOP_ID` from `.env` |
+| Offline token | `offline` | `shop.apiKey` from MongoDB + `SESAMI_CLIENT_ID` | `shopId` on each proxy request (`?shopId=` or `x-shop-id`) |
+
+**`env` mode:** Set read/write API keys and `sesami_ADMIN_SHOP_ID` as in `.env.sample`. The client may pass `shopId`, but the server uses the env shop id.
+
+**`offline` mode:** Complete the OAuth install flow first so the shop exists in the database with `apiKey` and `installationStatus=INSTALLED`. The client must send `shopId` on every `/api/sesami/*` request (the admin UI reads it from the iframe URL `shopId` query param). Never expose `shop.apiKey` to the browser.
+
 Alternatively, you can pass these variables when running your container.
 
 🚀 Production Build & Deployment

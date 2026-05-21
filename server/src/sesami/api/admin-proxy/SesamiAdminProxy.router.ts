@@ -1,28 +1,31 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { SesamiURL } from '../../config/URL.config';
+import {
+    buildProxyAuthHeaders,
+    copyUpstreamQuery,
+    resolveProxyShopId,
+} from '../../authentication/SesamiProxyAuth';
+import { HttpCode } from '../../exceptions/Error.interface';
 
 const SESAMI_API_BASE_URL = new URL(SesamiURL.api).toString().replace(/\/+$/, '');
 
-function requiredEnv(name: string): string {
-    const value = process.env[name];
-    if (!value) {
-        throw new Error(`Missing required env var: ${name}`);
+function appendQueryToUrl(url: URL, req: Request) {
+    for (const [key, value] of Object.entries(copyUpstreamQuery(req))) {
+        if (Array.isArray(value)) {
+            for (const item of value) {
+                url.searchParams.append(key, String(item));
+            }
+        } else {
+            url.searchParams.set(key, String(value));
+        }
     }
-    return value;
 }
 
-function buildAuthHeaders(method: string) {
-    const isReadOnly = method === 'GET' || method === 'HEAD';
-    return {
-        'x-api-key': requiredEnv(
-            isReadOnly ? 'read_SESAMI_API_KEY' : 'write_SESAMI_API_KEY',
-        ),
-        'x-client-id': requiredEnv(
-            isReadOnly ? 'read_SESAMI_CLIENT_ID' : 'write_SESAMI_CLIENT_ID',
-        ),
-        'x-shop-id': requiredEnv('sesami_ADMIN_SHOP_ID'),
-        'content-type': 'application/json',
-    } as const;
+function isMissingShopIdError(err: unknown): err is Error {
+    return (
+        err instanceof Error &&
+        err.message.startsWith('Missing shopId')
+    );
 }
 
 async function forwardToSesami(
@@ -33,7 +36,7 @@ async function forwardToSesami(
 ) {
     try {
         const method = req.method.toUpperCase();
-        const headers = buildAuthHeaders(method);
+        const headers = await buildProxyAuthHeaders(req, method);
 
         const upstream = await fetch(targetUrl, {
             method,
@@ -57,106 +60,130 @@ async function forwardToSesami(
     }
 }
 
+async function handleSesamiProxy(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+    buildTargetUrl: (shopId: string) => string,
+) {
+    try {
+        const shopId = resolveProxyShopId(req);
+        return forwardToSesami(req, res, next, buildTargetUrl(shopId));
+    } catch (err) {
+        if (isMissingShopIdError(err)) {
+            return res.status(HttpCode.BAD_REQUEST).json({ message: err.message });
+        }
+        return next(err);
+    }
+}
+
 export const sesamiAdminProxyRoute: Router = Router();
 
 sesamiAdminProxyRoute.get(
     '/resources',
     async (req: Request, res: Response, next: NextFunction) => {
-        const shop = requiredEnv('sesami_ADMIN_SHOP_ID');
-        const url = new URL(
-            `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shop)}/resources`,
-        );
-        for (const [key, value] of Object.entries(req.query)) {
-            if (value !== undefined && value !== null) {
-                url.searchParams.set(key, String(value));
-            }
-        }
-        return forwardToSesami(req, res, next, url.toString());
+        return handleSesamiProxy(req, res, next, (shopId) => {
+            const url = new URL(
+                `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shopId)}/resources`,
+            );
+            appendQueryToUrl(url, req);
+            return url.toString();
+        });
     },
 );
 
 sesamiAdminProxyRoute.get(
     '/services',
     async (req: Request, res: Response, next: NextFunction) => {
-        const shop = requiredEnv('sesami_ADMIN_SHOP_ID');
-        const url = new URL(
-            `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shop)}/services`,
-        );
-        for (const [key, value] of Object.entries(req.query)) {
-            if (value !== undefined && value !== null) {
-                url.searchParams.set(key, String(value));
-            }
-        }
-        return forwardToSesami(req, res, next, url.toString());
+        return handleSesamiProxy(req, res, next, (shopId) => {
+            const url = new URL(
+                `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shopId)}/services`,
+            );
+            appendQueryToUrl(url, req);
+            return url.toString();
+        });
     },
 );
 
 sesamiAdminProxyRoute.get(
     '/services/:id',
     async (req: Request, res: Response, next: NextFunction) => {
-        const shop = requiredEnv('sesami_ADMIN_SHOP_ID');
         const { id } = req.params;
-        const url = `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shop)}/services/${encodeURIComponent(
-            id,
-        )}`;
-        return forwardToSesami(req, res, next, url);
+        return handleSesamiProxy(
+            req,
+            res,
+            next,
+            (shopId) =>
+                `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shopId)}/services/${encodeURIComponent(id)}`,
+        );
     },
 );
 
 sesamiAdminProxyRoute.patch(
     '/services/:id',
     async (req: Request, res: Response, next: NextFunction) => {
-        const shop = requiredEnv('sesami_ADMIN_SHOP_ID');
         const { id } = req.params;
-        const url = `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shop)}/services/${encodeURIComponent(
-            id,
-        )}`;
-        return forwardToSesami(req, res, next, url);
+        return handleSesamiProxy(
+            req,
+            res,
+            next,
+            (shopId) =>
+                `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shopId)}/services/${encodeURIComponent(id)}`,
+        );
     },
 );
 
 sesamiAdminProxyRoute.post(
     '/resources',
     async (req: Request, res: Response, next: NextFunction) => {
-        const shop = requiredEnv('sesami_ADMIN_SHOP_ID');
-        const url = `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shop)}/resources`;
-        return forwardToSesami(req, res, next, url);
+        return handleSesamiProxy(
+            req,
+            res,
+            next,
+            (shopId) =>
+                `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shopId)}/resources`,
+        );
     },
 );
 
 sesamiAdminProxyRoute.get(
     '/resources/:id',
     async (req: Request, res: Response, next: NextFunction) => {
-        const shop = requiredEnv('sesami_ADMIN_SHOP_ID');
         const { id } = req.params;
-        const url = `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shop)}/resources/${encodeURIComponent(
-            id,
-        )}`;
-        return forwardToSesami(req, res, next, url);
+        return handleSesamiProxy(
+            req,
+            res,
+            next,
+            (shopId) =>
+                `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shopId)}/resources/${encodeURIComponent(id)}`,
+        );
     },
 );
 
 sesamiAdminProxyRoute.patch(
     '/resources/:id',
     async (req: Request, res: Response, next: NextFunction) => {
-        const shop = requiredEnv('sesami_ADMIN_SHOP_ID');
         const { id } = req.params;
-        const url = `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shop)}/resources/${encodeURIComponent(
-            id,
-        )}`;
-        return forwardToSesami(req, res, next, url);
+        return handleSesamiProxy(
+            req,
+            res,
+            next,
+            (shopId) =>
+                `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shopId)}/resources/${encodeURIComponent(id)}`,
+        );
     },
 );
 
 sesamiAdminProxyRoute.delete(
     '/resources/:id',
     async (req: Request, res: Response, next: NextFunction) => {
-        const shop = requiredEnv('sesami_ADMIN_SHOP_ID');
         const { id } = req.params;
-        const url = `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shop)}/resources/${encodeURIComponent(
-            id,
-        )}`;
-        return forwardToSesami(req, res, next, url);
+        return handleSesamiProxy(
+            req,
+            res,
+            next,
+            (shopId) =>
+                `${SESAMI_API_BASE_URL}/api/v1/${encodeURIComponent(shopId)}/resources/${encodeURIComponent(id)}`,
+        );
     },
 );
-

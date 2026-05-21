@@ -1,5 +1,9 @@
 import { sesamiRequest } from './sesami-request';
 
+export interface SesamiProxyParams {
+    shopId: string;
+}
+
 export interface CreateResourceRequestPayload {
     typeId: string;
     name: string;
@@ -15,11 +19,11 @@ export interface CreateResourceRequestPayload {
     notificationEmailStatus?: boolean;
 }
 
-export interface CreateResourceRequestParams {
+export interface CreateResourceRequestParams extends SesamiProxyParams {
     payload: CreateResourceRequestPayload;
 }
 
-export interface RetrieveServicesParams {
+export interface RetrieveServicesParams extends SesamiProxyParams {
     limit: number;
     after?: string;
     before?: string;
@@ -27,7 +31,7 @@ export interface RetrieveServicesParams {
     status?: boolean;
 }
 
-export interface RetrieveResourcesParams {
+export interface RetrieveResourcesParams extends SesamiProxyParams {
     limit: number;
     after?: string;
     before?: string;
@@ -35,15 +39,15 @@ export interface RetrieveResourcesParams {
     status?: boolean;
 }
 
-export interface RetrieveServiceByIdParams {
+export interface RetrieveServiceByIdParams extends SesamiProxyParams {
     id: string;
 }
 
-export interface RetrieveResourceByIdParams {
+export interface RetrieveResourceByIdParams extends SesamiProxyParams {
     id: string;
 }
 
-export interface UpdateServiceParams {
+export interface UpdateServiceParams extends SesamiProxyParams {
     id: string;
     payload: Record<string, unknown>;
 }
@@ -63,84 +67,117 @@ export interface UpdateResourceRequestPayload {
     notificationEmailStatus?: boolean;
 }
 
-export interface UpdateResourceParams {
+export interface UpdateResourceParams extends SesamiProxyParams {
     id: string;
     payload: UpdateResourceRequestPayload;
 }
 
-export interface DeleteResourceParams {
+export interface DeleteResourceParams extends SesamiProxyParams {
     id: string;
 }
 
-export const createResourceRequest = async (params: CreateResourceRequestParams) => {
+export const createResourceRequest = async ({
+    shopId,
+    payload,
+}: CreateResourceRequestParams) => {
     const url = `/api/sesami/resources`;
-    return sesamiRequest()(url, 'POST', params.payload);
+    return sesamiRequest(shopId)(url, 'POST', payload);
 };
 
-export const retrieveServicesRequest = async (params: RetrieveServicesParams) => {
+export const retrieveServicesRequest = async ({
+    shopId,
+    limit,
+    after,
+    before,
+    searchTerm,
+    status,
+}: RetrieveServicesParams) => {
     const searchParams = new URLSearchParams();
-    searchParams.set('limit', String(params.limit));
+    searchParams.set('limit', String(limit));
 
-    if (params.after) {
-        searchParams.set('after', params.after);
+    if (after) {
+        searchParams.set('after', after);
     }
-    if (params.before) {
-        searchParams.set('before', params.before);
+    if (before) {
+        searchParams.set('before', before);
     }
-    if (params.searchTerm) {
-        searchParams.set('searchTerm', params.searchTerm);
+    if (searchTerm) {
+        searchParams.set('searchTerm', searchTerm);
     }
-    if (typeof params.status === 'boolean') {
-        searchParams.set('status', String(params.status));
+    if (typeof status === 'boolean') {
+        searchParams.set('status', String(status));
     }
 
     const url = `/api/sesami/services?${searchParams.toString()}`;
-    return sesamiRequest()(url, 'GET');
+    return sesamiRequest(shopId)(url, 'GET');
 };
 
-export const retrieveServiceByIdRequest = async (params: RetrieveServiceByIdParams) => {
-    const url = `/api/sesami/services/${encodeURIComponent(params.id)}`;
-    return sesamiRequest()(url, 'GET');
+export const retrieveServiceByIdRequest = async ({
+    shopId,
+    id,
+}: RetrieveServiceByIdParams) => {
+    const url = `/api/sesami/services/${encodeURIComponent(id)}`;
+    return sesamiRequest(shopId)(url, 'GET');
 };
 
-export const updateServiceRequest = async (params: UpdateServiceParams) => {
-    const url = `/api/sesami/services/${encodeURIComponent(params.id)}`;
-    return sesamiRequest()(url, 'PATCH', params.payload);
+export const updateServiceRequest = async ({
+    shopId,
+    id,
+    payload,
+}: UpdateServiceParams) => {
+    const url = `/api/sesami/services/${encodeURIComponent(id)}`;
+    return sesamiRequest(shopId)(url, 'PATCH', payload);
 };
 
-export const retrieveResourceByIdRequest = async (params: RetrieveResourceByIdParams) => {
-    const url = `/api/sesami/resources/${encodeURIComponent(params.id)}`;
-    return sesamiRequest()(url, 'GET');
+export const retrieveResourceByIdRequest = async ({
+    shopId,
+    id,
+}: RetrieveResourceByIdParams) => {
+    const url = `/api/sesami/resources/${encodeURIComponent(id)}`;
+    return sesamiRequest(shopId)(url, 'GET');
 };
 
-export const updateResourceRequest = async (params: UpdateResourceParams) => {
-    const url = `/api/sesami/resources/${encodeURIComponent(params.id)}`;
-    return sesamiRequest()(url, 'PATCH', params.payload);
+export const updateResourceRequest = async ({
+    shopId,
+    id,
+    payload,
+}: UpdateResourceParams) => {
+    const url = `/api/sesami/resources/${encodeURIComponent(id)}`;
+    return sesamiRequest(shopId)(url, 'PATCH', payload);
 };
 
-export const deleteResourceRequest = async (params: DeleteResourceParams) => {
-    const url = `/api/sesami/resources/${encodeURIComponent(params.id)}`;
-    return sesamiRequest()(url, 'DELETE');
+export const deleteResourceRequest = async ({
+    shopId,
+    id,
+}: DeleteResourceParams) => {
+    const url = `/api/sesami/resources/${encodeURIComponent(id)}`;
+    return sesamiRequest(shopId)(url, 'DELETE');
 };
 
-export const retrieveResourcesRequest = async (params: RetrieveResourcesParams) => {
+export const retrieveResourcesRequest = async ({
+    shopId,
+    limit,
+    after,
+    before,
+    searchTerm,
+    status,
+}: RetrieveResourcesParams) => {
     const searchParams = new URLSearchParams();
-    searchParams.set('limit', String(params.limit));
+    searchParams.set('limit', String(limit));
 
-    if (params.after) {
-        searchParams.set('after', params.after);
+    if (after) {
+        searchParams.set('after', after);
     }
-    if (params.before) {
-        searchParams.set('before', params.before);
+    if (before) {
+        searchParams.set('before', before);
     }
-    if (params.searchTerm) {
-        searchParams.set('searchTerm', params.searchTerm);
+    if (searchTerm) {
+        searchParams.set('searchTerm', searchTerm);
     }
-    if (typeof params.status === 'boolean') {
-        searchParams.set('status', String(params.status));
+    if (typeof status === 'boolean') {
+        searchParams.set('status', String(status));
     }
 
     const url = `/api/sesami/resources?${searchParams.toString()}`;
-    return sesamiRequest()(url, 'GET');
+    return sesamiRequest(shopId)(url, 'GET');
 };
-
