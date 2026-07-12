@@ -1,0 +1,42 @@
+name: Deploy — staging
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Self-hosted runner on its own Hetzner box. It dials out to GitHub over
+    # HTTPS (no inbound rule needed) and reaches the app box over the Hetzner
+    # private network (DEPLOY_HOST = the app box's private IP), so the deploy
+    # never crosses the public interface the Cloud Firewall guards.
+    runs-on: [self-hosted, hetzner]
+    environment: staging
+    timeout-minutes: 30
+
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
+      NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+      SESAMI_CLIENT_ID: ${{ secrets.SESAMI_CLIENT_ID }}
+      SESAMI_CLIENT_SECRET: ${{ secrets.SESAMI_CLIENT_SECRET }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write Kamal secrets file
+        run: |
+          mkdir -p .kamal
+          cat > .kamal/secrets-common <<'EOF'
+          KAMAL_REGISTRY_PASSWORD=${KAMAL_REGISTRY_PASSWORD}
+          NODE_AUTH_TOKEN=${NODE_AUTH_TOKEN}
+          SESAMI_CLIENT_ID=${SESAMI_CLIENT_ID}
+          SESAMI_CLIENT_SECRET=${SESAMI_CLIENT_SECRET}
+          EOF
+
+      - run: kamal deploy -d staging

@@ -1,0 +1,52 @@
+name: Deploy — production
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Self-hosted runner on its own Hetzner box — see deploy-staging.yml.
+    runs-on: [self-hosted, hetzner]
+    environment: production
+    timeout-minutes: 30
+
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
+      NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+      SESAMI_CLIENT_ID: ${{ secrets.SESAMI_CLIENT_ID }}
+      SESAMI_CLIENT_SECRET: ${{ secrets.SESAMI_CLIENT_SECRET }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write Kamal secrets file
+        run: |
+          mkdir -p .kamal
+          cat > .kamal/secrets-common <<'EOF'
+          KAMAL_REGISTRY_PASSWORD=${KAMAL_REGISTRY_PASSWORD}
+          NODE_AUTH_TOKEN=${NODE_AUTH_TOKEN}
+          SESAMI_CLIENT_ID=${SESAMI_CLIENT_ID}
+          SESAMI_CLIENT_SECRET=${SESAMI_CLIENT_SECRET}
+          EOF
+
+      - run: kamal deploy
+
+  # Slack post-deploy notification. Only fires on `release` events so the
+  # message has a tag, release notes, and a stable link to point at.
+  # Runs on GitHub-hosted runners (it only posts to Slack — no box access).
+  # Mirrors the convention used by storefront, portal, forms-app, etc.
+  release-notification:
+    if: ${{ github.event_name == 'release' }}
+    needs: [deploy]
+    uses: sesamiapp/shared-workflows/.github/workflows/release-notification.yaml@master
+    with:
+      environment: prod
+    secrets:
+      slack_notification_webhook: ${{ secrets.SLACK_NOTIFICATION_WEBHOOK }}
